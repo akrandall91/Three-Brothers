@@ -1,7 +1,0 @@
-node_modules/
-.env
-data/catalog.sqlite
-data/catalog.sqlite-journal
-data/catalog.sqlite-shm
-data/catalog.sqlite-wal
-data/.session-secret

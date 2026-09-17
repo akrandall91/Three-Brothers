@@ -1,103 +1,91 @@
 # H&L Seafood Catalog
 
-A small full-stack app: a public product catalog (search, filter, build a quote) plus a
-password-protected `/admin` panel for editing prices and items. Replaces the old
-single-file `seafood-price-list.html`, which had no real persistence and no login.
+A plain static site — no server, no build step. Customers search/filter the
+price list and build a quote. Prices live in a Google Sheet, so updating them
+is just editing a spreadsheet.
 
-## What changed from the old file
+**Live data:** [Three Brothers Seafood — Price List (live)](https://docs.google.com/spreadsheets/d/16FrglTqX1rhFjZyDKOXoMxBLbvKKI4Eya6p_phMseQA/edit)
 
-- Data now lives in a SQLite database (`data/catalog.sqlite`), not baked into the HTML.
-- Editing requires an admin password instead of anyone being able to click "Edit catalog."
-- Several data-entry errors inherited from the original spreadsheet were fixed on import:
-  - `POLLOCK FILLET SKINLESS 2/4` was priced at **$260.00/lb** — corrected to **$2.60/lb**
-    (a decimal-shift typo; verify against the current market price).
-  - Five items (`FRESH WATER SHRIMP 'HOSO' 1/2, 2/4, 4/6`, `Tiger Shrimp 8/12 Hlso`,
-    `SHRIMP 8/12 WH P&D CKD T-ON CENSEA`) had a date where their packaging field
-    ("CASE") should have been — reset to `CS`.
-  - `CRAWFISH MEAT 150UP (16X12OZ)` and `WHELK 20/30 PCS IN SHELL COOKED` had values
-    shifted into the wrong columns in the source sheet — unit/case fixed, the
-    now-unrecoverable quantity was cleared rather than guessed.
-  - `WHELK MEAT 15/25 GRAM COOKED` had "38.0" where its unit should read "LB" — fixed.
-  - `PROCESSED SCALLOP REQUEST` had a stray date in its pack-size field — cleared.
-  - A duplicate `LOBSTER TAIL MEAT` line (identical name/pack/price to another row)
-    was removed.
-  - All of these are worth a quick manual sanity check against your current supplier
-    pricing in the admin panel.
+## One-time setup (do this before the site will show prices)
 
-## Running it locally
+The sheet needs to be link-viewable so the page can fetch it as CSV:
 
-```bash
-npm install
-cp .env.example .env
-```
+1. Open the sheet (link above).
+2. **Share → General access → change "Restricted" to "Anyone with the link" → Viewer.**
+3. That's it — no password, no login needed to view the sheet's data this way,
+   but only people with **edit** access (still just you, unless you share it)
+   can change it.
 
-Edit `.env` and set `ADMIN_PASSWORD` to something only you know, then:
+Until you do this, the site will show a "could not load current prices" message.
 
-```bash
-npm start
-```
+## Editing prices day-to-day
 
-- Public catalog: http://localhost:3000
-- Admin panel: http://localhost:3000/admin
+Open the sheet and edit cells directly:
 
-The database is created automatically on first run and seeded from `data/seed.json`
-(the cleaned-up price list). After that, `data/seed.json` is only a fallback — all
-edits live in `data/catalog.sqlite`.
+- **Change a price** — edit the `price` column, e.g. `4.25`.
+- **Add an item** — add a new row. Give it a unique `id` (anything unused,
+  e.g. `i222`), fill in the other columns, pick an existing `category` value
+  so it groups correctly (see the list in `assets/catalog.js` under
+  `CAT_COLORS` — using a new category name still works, it'll just render
+  with a default gray swatch).
+- **Remove an item** — delete its row.
+- **Reorder categories or styling** — not spreadsheet-controlled; that lives
+  in the site code (`assets/catalog.js` / `assets/style.css`).
 
-## Deploying
+Changes usually show up on the site within a few seconds to a couple minutes
+(Google's CSV export is lightly cached). No redeploy needed.
 
-This is a plain Node.js app with a local SQLite file, so it needs a host with a
-persistent disk (not a serverless/edge platform like Vercel or Netlify functions,
-which reset their filesystem on every request). Good fits: **Render**, **Railway**,
-**Fly.io**, or any VPS.
+## Editing business info (name, phone, footer note)
 
-General steps (Render/Railway are similar):
+These change rarely, so they're hardcoded at the top of `assets/catalog.js`
+in the `BUSINESS` object, not in the sheet. Edit that, commit, and push (or
+edit directly on github.com) to change them.
 
-1. This repo is already on GitHub — connect it from the host's dashboard.
-2. Create a new "Web Service" from the repo.
-3. Build command: `npm install`
-4. Start command: `npm start`
-5. Add environment variables in the host's dashboard:
-   - `ADMIN_PASSWORD` — your admin password
-   - `SESSION_SECRET` — any long random string (so admin logins survive restarts/redeploys)
-   - `NODE_ENV=production`
-6. Attach a **persistent disk/volume** mounted at `data/` so it survives redeploys
-   (otherwise your edits are lost every time you redeploy). On Render this is a
-   "Disk" mounted at, e.g., `/opt/render/project/src/data`; on Railway it's a
-   "Volume."
+## Hosting on GitHub Pages
 
-Once deployed, share the site URL with customers and keep `/admin` (with your
-password) for yourself.
+1. Push this repo to GitHub (already done if you're reading this from the repo).
+2. On GitHub: **Settings → Pages → Source: Deploy from a branch → Branch: `main` / `(root)`.**
+3. GitHub gives you a URL like `https://<username>.github.io/<repo>/`. That's
+   the live site — share it with customers.
+4. Every `git push` to `main` updates the site automatically within a minute
+   or two. Price changes in the Sheet don't need a push at all.
 
 ## Project layout
 
 ```
-server/
-  index.js       express app entry
-  db.js           sqlite schema + one-time seeding
-  auth.js         password check + signed session cookie
-  routes/
-    catalog.js    GET /api/catalog (public)
-    admin.js      /api/admin/* (login, items CRUD, business info)
-public/
-  index.html      customer-facing catalog
-  admin.html       admin login + dashboard
-  assets/
-    style.css
-    catalog.js     customer page logic (fetches /api/catalog)
-    admin.js        admin page logic (fetches/writes /api/admin/*)
-data/
-  seed.json         cleaned starting data (only used on first run)
-  catalog.sqlite     created automatically — the live database (gitignored)
+index.html            the whole page shell
+assets/
+  style.css            all styling
+  catalog.js           fetches the sheet, renders the catalog, cart/quote logic
+                        (also where BUSINESS info and the sheet URL live)
 legacy/
   Price List- Three Brothers Seafood .xlsx   original spreadsheet, kept for reference
-  seafood-price-list.html                     original static single-file version
+  seafood-price-list.html                     original single-file static version
 ```
 
-## Security notes
+## Notes on the data
 
-- Admin auth is a single shared password (`ADMIN_PASSWORD`) plus a signed,
-  httpOnly session cookie — appropriate for a single small-business owner, not
-  built for multiple separate admin accounts.
-- Login attempts are rate-limited (10 per 15 minutes) to slow down guessing.
-- Set `NODE_ENV=production` in deployment so session cookies require HTTPS.
+Several data-entry errors inherited from the original spreadsheet were fixed
+when this was built (worth a quick sanity check against current supplier
+pricing):
+
+- `POLLOCK FILLET SKINLESS 2/4` was priced at $260.00/lb — corrected to $2.60/lb.
+- Five shrimp items had a date where their packaging field should have been —
+  reset to `CS`.
+- `CRAWFISH MEAT 150UP` and `WHELK 20/30 PCS IN SHELL COOKED` had values
+  shifted into the wrong spreadsheet columns; unit/case were fixed, and the
+  now-unrecoverable quantity was cleared rather than guessed.
+- A duplicate `LOBSTER TAIL MEAT` line was removed.
+
+## Limits of this approach
+
+- The Google Sheet is viewable (read-only) by anyone with its link, since
+  that's what lets the static page fetch it without a backend. It's not
+  indexed or discoverable, but the link itself isn't a secret. Fine for a
+  price list; don't put anything sensitive in that sheet.
+- No login-gated admin page — anyone you share edit access to the sheet with
+  can change prices. Manage that the same way you'd manage who can edit a
+  shared spreadsheet.
+- If you ever outgrow this (need instant updates, a real login, order
+  history, etc.), the earlier Node/Express + SQLite version of this project
+  is a drop-in upgrade path — ask to bring that back.

@@ -1,6 +1,20 @@
 (function () {
   "use strict";
 
+  // ---- Business info: edit these directly and commit to update the site. ----
+  var BUSINESS = {
+    name: "H&L Wholesale Seafood",
+    phone: "305-842-0535",
+    email: "",
+    note: "We offer a wide variety of fresh and live seafood, including Dungeness crab, blue crab, lobster, fresh yellowfin tuna, clams (any size), and oysters (all kinds). Emergency weekend deliveries available. Prices are updated weekly and vary by product."
+  };
+
+  // ---- Item prices/pack/etc. live in a Google Sheet, published as CSV. ----
+  // To point this at a different sheet: File > Share > General access > Anyone
+  // with the link > Viewer, then use its export URL here:
+  //   https://docs.google.com/spreadsheets/d/<SHEET_ID>/export?format=csv&gid=0
+  var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/16FrglTqX1rhFjZyDKOXoMxBLbvKKI4Eya6p_phMseQA/export?format=csv&gid=0";
+
   var CAT_COLORS = {
     "Shrimp": "#e2632f",
     "Crab": "#c1442e",
@@ -21,7 +35,7 @@
   var CART_KEY = "hlseafood_cart_v1";
   var CUSTOMER_KEY = "hlseafood_customer_v1";
 
-  var liveData = { business: {}, items: [] };
+  var liveData = { business: BUSINESS, items: [] };
   var cart = loadJSON(CART_KEY, {});
   var customer = loadJSON(CUSTOMER_KEY, { name: "", phone: "", notes: "" });
   var ui = { q: "", cats: new Set(), sort: "cat", drawerOpen: false };
@@ -43,15 +57,71 @@
     return "$" + Number(p).toFixed(2);
   }
 
-  fetch("/api/catalog")
-    .then(function (r) { if (!r.ok) throw new Error("bad response"); return r.json(); })
-    .then(function (data) {
-      liveData = data;
+  // ---- Minimal RFC4180-ish CSV parser (handles quoted fields, "" escapes, commas/newlines in quotes) ----
+  function parseCSV(text) {
+    var rows = [];
+    var row = [];
+    var field = "";
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else { inQuotes = false; }
+        } else {
+          field += c;
+        }
+      } else {
+        if (c === '"') inQuotes = true;
+        else if (c === ',') { row.push(field); field = ""; }
+        else if (c === '\r') { /* skip */ }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
+        else field += c;
+      }
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.length > 1 || (r.length === 1 && r[0] !== ""); });
+  }
+
+  function rowsToItems(rows) {
+    if (!rows.length) return [];
+    var header = rows[0].map(function (h) { return h.trim().toLowerCase(); });
+    var idx = {};
+    header.forEach(function (h, i) { idx[h] = i; });
+    var items = [];
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r];
+      var get = function (key) { return idx[key] != null ? (row[idx[key]] || "").trim() : ""; };
+      var name = get("name");
+      if (!name) continue;
+      var priceRaw = get("price");
+      var qtyRaw = get("qty");
+      items.push({
+        id: get("id") || ("row" + r),
+        name: name,
+        pack: get("pack"),
+        price: priceRaw === "" ? null : Number(priceRaw),
+        unit: get("unit"),
+        case: get("case"),
+        qty: qtyRaw === "" ? null : Number(qtyRaw),
+        category: get("category") || "Other Seafood"
+      });
+    }
+    return items;
+  }
+
+  fetch(SHEET_CSV_URL + (SHEET_CSV_URL.indexOf("?") === -1 ? "?" : "&") + "cachebust=" + Date.now())
+    .then(function (r) { if (!r.ok) throw new Error("bad response " + r.status); return r.text(); })
+    .then(function (text) {
+      liveData.items = rowsToItems(parseCSV(text));
       render();
     })
-    .catch(function () {
+    .catch(function (err) {
       document.getElementById("app").innerHTML =
-        '<div class="empty"><div class="big">⚠️</div>Could not load the catalog right now. Please refresh or try again shortly.</div>';
+        '<div class="empty"><div class="big">⚠️</div>Could not load current prices right now. Please refresh, or call ' +
+        esc(BUSINESS.phone) + ' for pricing.</div>';
+      console.error("Catalog load failed:", err);
     });
 
   var toastTimer = null;
@@ -176,7 +246,7 @@
     var subs = [];
     if (it.pack) subs.push('<span>Pack ' + esc(it.pack) + '</span>');
     if (it.case) subs.push('<span>' + esc(it.case) + '</span>');
-    if (it.qty != null) subs.push('<span>Qty ' + (it.qty % 1 === 0 ? it.qty.toFixed(0) : it.qty) + '</span>');
+    if (it.qty != null && !isNaN(it.qty)) subs.push('<span>Qty ' + (it.qty % 1 === 0 ? it.qty.toFixed(0) : it.qty) + '</span>');
     var inCart = cart[it.id] || 0;
     var qtyControl = inCart > 0
       ? '<div class="stepper" data-id="' + it.id + '"><button type="button" class="dec">&minus;</button><span class="n">' + inCart + '</span><button type="button" class="inc">+</button></div>'
@@ -193,7 +263,6 @@
     return '<footer class="note">' +
       (b.note ? esc(b.note) + ' ' : '') +
       (b.phone ? 'Call <a href="tel:' + esc(b.phone.replace(/[^0-9+]/g, '')) + '" style="color:var(--coral);font-weight:700;text-decoration:none;">' + esc(b.phone) + '</a> to confirm current pricing and place an order.' : '') +
-      '<div class="updated-line">Catalog last updated ' + esc(b.updated_at || "") + ' &middot; <a href="/admin" style="color:inherit;">Staff login</a></div>' +
       '</footer>';
   }
 
