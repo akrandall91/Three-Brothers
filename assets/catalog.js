@@ -21,7 +21,7 @@
   // Sheet via a Google Apps Script Web App (see apps-script/Code.gs and the
   // README's "Order tracking" section for how to set this up). Leave blank
   // to disable the "Submit order" button (email/copy quote still work).
-  var ORDERS_WEBHOOK_URL = "";
+  var ORDERS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwE24vSsmdBhP8S_qeMPqx2Ocp88HVqdnEd8EtI27mWlXhCS65j5imX9vIU0-TbwkMP1A/exec";
 
   var CAT_COLORS = {
     "Shrimp": "#e2632f",
