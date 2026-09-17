@@ -21,7 +21,10 @@ window.BUSINESS_CONFIG = {
   weekendNote: 'Emergency weekend deliveries available. Call to check availability.',
   PRODUCT_OVERRIDES: {
     // Add only verified values, keyed by the sheet's product ID:
-    // i123: { orderUnit: 'case', caseWeightLb: 24 }
-    // Optional sheet columns order_unit and case_weight_lb are also supported.
+    // i123: { orderUnit: 'case', caseWeightLb: 24, minQty: 2 }
+    // Optional sheet columns order_unit, case_weight_lb, and min_qty are
+    // also supported and editable from the admin page's Products tab —
+    // prefer those for routine changes; use overrides here only for
+    // verified values you want to guarantee ship with the code.
   }
 };

@@ -155,6 +155,12 @@
       '<div><label>Unit</label><input class="f-unit" value="' + esc(it.unit || "") + '"></div>' +
       '<div><label>Packaging</label><input class="f-case" value="' + esc(it.case || "") + '"></div>' +
       '<div><label>Qty per case</label><input class="f-qty" type="number" step="1" value="' + (it.qty === "" || it.qty == null ? "" : it.qty) + '"></div>' +
+      '<div><label>Order unit (blank = auto)</label><select class="f-order-unit">' +
+      ['', 'lb', 'case', 'box', 'bag', 'each'].map(function (u) {
+        return '<option value="' + u + '"' + ((it.order_unit || "") === u ? " selected" : "") + '>' + (u || "Auto (retail/wholesale toggle)") + '</option>';
+      }).join('') + '</select></div>' +
+      '<div><label>Case weight (lb)</label><input class="f-case-weight" type="number" step="0.1" value="' + (it.case_weight_lb === "" || it.case_weight_lb == null ? "" : it.case_weight_lb) + '"></div>' +
+      '<div><label>Min order qty</label><input class="f-min-qty" type="number" step="1" min="1" value="' + (it.min_qty === "" || it.min_qty == null ? "" : it.min_qty) + '"></div>' +
       '</div>' +
       '<div class="item-edit-actions"><span class="save-status row-status"></span><button type="button" class="btn small danger f-delete">Delete item</button></div>' +
       '</div>';
@@ -204,6 +210,9 @@
         it.unit = row.querySelector(".f-unit").value;
         it.case = row.querySelector(".f-case").value;
         it.qty = row.querySelector(".f-qty").value;
+        it.order_unit = row.querySelector(".f-order-unit").value;
+        it.case_weight_lb = row.querySelector(".f-case-weight").value;
+        it.min_qty = row.querySelector(".f-min-qty").value;
 
         if (rowStatus) { rowStatus.textContent = "Saving…"; rowStatus.className = "save-status row-status"; }
         clearTimeout(saveTimer);
@@ -217,10 +226,11 @@
         }, 500);
       }
 
-      row.querySelectorAll(".f-name,.f-pack,.f-price,.f-unit,.f-case,.f-qty").forEach(function (input) {
+      row.querySelectorAll(".f-name,.f-pack,.f-price,.f-unit,.f-case,.f-qty,.f-case-weight,.f-min-qty").forEach(function (input) {
         input.addEventListener("input", scheduleSave);
       });
       row.querySelector(".f-cat").addEventListener("change", scheduleSave);
+      row.querySelector(".f-order-unit").addEventListener("change", scheduleSave);
 
       row.querySelector(".f-delete").onclick = function () {
         if (!confirm('Delete "' + it.name + '"? This cannot be undone.')) return;

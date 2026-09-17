@@ -142,7 +142,7 @@ function findItemRow(sheet, id) {
 function coerceRow(header, p, id) {
   return header.map(function (h) {
     if (h === "id") return id;
-    if (h === "price" || h === "qty") {
+    if (h === "price" || h === "qty" || h === "min_qty" || h === "case_weight_lb") {
       if (p[h] === "" || p[h] == null) return "";
       var n = Number(p[h]);
       return isNaN(n) ? "" : n;

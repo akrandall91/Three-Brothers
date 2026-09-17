@@ -52,6 +52,53 @@ to a couple minutes (Google's published-CSV cache). No redeploy needed.
 Business details are configured in `assets/business.js`, separate from the
 product sheet. Edit confirmed values there, commit, and push to update them.
 
+## Retail vs. wholesale
+
+A **Retail / Wholesale** toggle sits above the product search. It's a
+whole-visit setting (not per item), remembered in the browser between visits,
+and affects only pound-priced products that don't have an explicit
+`order_unit` override:
+
+- **Wholesale** (default) — request by the case. Total stays "to confirm"
+  until a verified case weight exists (see `PRODUCT_OVERRIDES` /
+  `case_weight_lb` below).
+- **Retail** — request by the lb. Always has a real, known price, since it's
+  just the sheet's per-lb price.
+
+Products already priced by case/box/bag/each, or with an explicit per-item
+`order_unit` override, ignore the toggle — there's no retail/wholesale
+distinction to make for those; the override always wins.
+
+Switching modes with items already in the quote clears it first (with a
+confirmation), since a quantity entered as "2" means something completely
+different in each unit (2 lb vs. 2 cases).
+
+## Minimum order quantities
+
+Set a per-item minimum via the admin page's **Min order qty** field (or the
+`min_qty` sheet column, or `minQty` in a `business.js` override). Below the
+minimum, the quantity stepper won't leave you at an in-between amount — going
+under it removes the item from the quote entirely rather than clamping to
+the minimum; the first "Add" jumps straight to it. The product card shows
+"Min order N {unit}" when set.
+
+## Verified case weights and order units (admin page)
+
+Three optional columns make case-based (wholesale) pricing and per-item
+overrides possible, all editable from the admin page's Products tab, or
+directly in the Price sheet:
+
+- `order_unit` — force a specific ordering unit (`lb`, `case`, `box`, `bag`,
+  `each`) regardless of the retail/wholesale toggle. Leave blank for "auto."
+- `case_weight_lb` — the verified weight of one case, in lb. Required for a
+  pound-priced item to show a real case total in Wholesale mode.
+- `min_qty` — minimum order quantity, see above.
+
+`assets/business.js`'s `PRODUCT_OVERRIDES` object does the same thing and
+takes precedence over the sheet columns — use it only for values you want
+guaranteed to ship with the code; prefer the sheet/admin page for anything
+that might change.
+
 ## Order tracking
 
 When a customer clicks **Send quote request** in the quote drawer, the order is
@@ -125,11 +172,16 @@ index.html            public catalog page
 admin.html             password-protected admin page (products + orders)
 assets/
   config.js             SHEET_CSV_URL and API_URL — edit these, shared by both pages
-  style.css             all styling
-  catalog.js            public catalog: fetches the sheet, cart/quote, order submission
-  admin.js               admin page: login, products CRUD, order status
+  business.js            branding, locations, delivery info, PRODUCT_OVERRIDES
+  quote-model.js          pure pricing/unit/quantity logic (offer, totals) — has its own tests
+  style.css               base styling (controls, cards, admin UI)
+  storefront.css           customer-facing storefront-specific styling
+  catalog.js              public catalog: fetches the sheet, cart/quote, order submission
+  admin.js                admin page: login, products CRUD, order status
 apps-script/
   Code.gs               paste into the Orders sheet's Apps Script editor
+tests/
+  quote.test.cjs         run with `node --test tests/quote.test.cjs`
 legacy/
   Price List- Three Brothers Seafood .xlsx   original spreadsheet, kept for reference
   seafood-price-list.html                     original single-file static version

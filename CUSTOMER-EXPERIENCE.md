@@ -80,6 +80,23 @@ No email notification service, payment processing, or guaranteed response
 time is added. Contact fields stay in memory; saved products and an unresolved
 request reference are stored locally on the customer's device.
 
+## Retail/wholesale toggle and minimum order quantities (follow-up)
+
+Added a site-wide Retail/Wholesale toggle (`assets/catalog.js` `mode`,
+persisted via `localStorage` key `tb_mode_v1`) and per-item minimum order
+quantities. Both are implemented in `assets/quote-model.js`'s `offer()`/
+`totals()`/`quantity()`, which now take a `mode` argument and read `minQty`
+from `PRODUCT_OVERRIDES` or the `min_qty` sheet column — see `tests/quote.test.cjs`
+for the exact contract. Default mode is `wholesale` (unchanged existing
+behavior); an explicit per-item `order_unit` always overrides the toggle.
+
+The admin page's Products tab gained three fields — **Order unit**,
+**Case weight (lb)**, and **Min order qty** — so `order_unit`, `case_weight_lb`,
+and `min_qty` are fully manageable from the admin page rather than only via
+`business.js` overrides or raw sheet edits. (These three sheet columns don't
+exist on the live Price sheet yet; add them as headers before using this —
+see README "Verified case weights and order units.")
+
 ## Validation and rollout
 
 Run `node --test tests/quote.test.cjs` for pricing, CSV, and mocked submission

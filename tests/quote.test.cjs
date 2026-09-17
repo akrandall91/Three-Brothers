@@ -21,6 +21,25 @@ test('explicit pound ordering and invalid quantities',()=>{
   assert.equal(M.offer({unit:'LB',price:'3.2',order_unit:'lb'}).orderPrice,3.2);
   for(const q of [-1,1.5,Infinity,'bad',10000])assert.equal(M.quantity(q),0);
 });
+test('retail mode orders pound-priced items by the lb with a known price; wholesale (default) orders by the case',()=>{
+  const i={unit:'LB',price:'3.2'};
+  assert.equal(M.offer(i,{}).orderUnit,'case');
+  assert.equal(M.offer(i,{},'wholesale').orderUnit,'case');
+  const retail=M.offer(i,{},'retail');
+  assert.equal(retail.orderUnit,'lb');assert.equal(retail.orderPrice,3.2);
+});
+test('an explicit per-item order-unit override wins over retail/wholesale mode',()=>{
+  const i={id:'s',unit:'LB',price:'3.2'};const config={PRODUCT_OVERRIDES:{s:{orderUnit:'case',caseWeightLb:10}}};
+  assert.equal(M.offer(i,config,'retail').orderUnit,'case');
+  assert.equal(M.offer(i,config,'retail').orderPrice,32);
+});
+test('minimum order quantity blocks below-minimum amounts instead of clamping to it',()=>{
+  assert.equal(M.quantity(3,5),0);assert.equal(M.quantity(5,5),5);assert.equal(M.quantity(6,5),6);
+  const i={id:'s',unit:'CS',price:'10'};const config={PRODUCT_OVERRIDES:{s:{minQty:3}}};
+  assert.equal(M.offer(i,config).minQty,3);
+  assert.deepEqual(M.totals([i],{s:2},config),{subtotal:0,pending:0,count:0});
+  assert.deepEqual(M.totals([i],{s:3},config),{subtotal:30,pending:0,count:1});
+});
 function app(fetch){
   const storage={};const element={addEventListener(){}};
   const ctx={window:{BUSINESS_CONFIG:{name:'Test',phone:'555-0100',locations:[{id:'nc',name:'NC'}]},SITE_CONFIG:{API_URL:'http://localhost/test'},QuoteModel:M},document:{getElementById(){return element;}},localStorage:{getItem(k){return storage[k];},setItem(k,v){storage[k]=v;}},URLSearchParams,AbortController,setTimeout,clearTimeout,Intl,crypto:require('node:crypto').webcrypto,fetch};
