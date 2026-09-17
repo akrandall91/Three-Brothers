@@ -1,10 +1,17 @@
-# H&L Seafood Catalog
+# Three Brothers Seafood Catalog
 
 A plain static site — no server, no build step. Customers search/filter the
 price list and build a quote. Prices live in a Google Sheet, so updating them
 is just editing a spreadsheet.
 
 **Live data:** [Three Brothers Seafood — Price List (live)](https://docs.google.com/spreadsheets/d/16FrglTqX1rhFjZyDKOXoMxBLbvKKI4Eya6p_phMseQA/edit)
+
+## Customer experience release
+
+See [CUSTOMER-EXPERIENCE.md](CUSTOMER-EXPERIENCE.md) for the current quote flow,
+verified business sources, explicit ordering units, pricing configuration,
+validation results, and rollout requirements. Unknown case weights and totals
+require confirmation; quantity is never treated as case weight.
 
 ## One-time setup (already done for this sheet)
 
@@ -42,14 +49,16 @@ to a couple minutes (Google's published-CSV cache). No redeploy needed.
 
 ## Editing business info (name, phone, footer note)
 
-These change rarely, so they're hardcoded at the top of `assets/catalog.js`
-in the `BUSINESS` object, not in the sheet. Edit that, commit, and push (or
-edit directly on github.com) to change them.
+Business details are configured in `assets/business.js`, separate from the
+product sheet. Edit confirmed values there, commit, and push to update them.
 
 ## Order tracking
 
-When a customer clicks **Submit order** in the quote drawer, the order is
-appended as a new row to a separate sheet:
+When a customer clicks **Send quote request** in the quote drawer, the order is
+appended as a new row to a separate sheet. The revised site confirms receipt
+only after an explicit server acknowledgment. Location, fulfillment, delivery
+address, and request reference are saved in the existing notes field:
+
 [Three Brothers Seafood — Orders](https://docs.google.com/spreadsheets/d/1JEjOll-vI-zzvJ0MB8JgpU52t2DxdNLpHYrX8b3w4qQ/edit)
 (columns: timestamp, customer_name, customer_phone, items, total, notes, status).
 Open that sheet to see incoming orders, and hand-edit the `status` column
@@ -74,7 +83,7 @@ way to automate the deploy click):
 7. Copy the **Web app URL** it gives you (ends in `/exec`).
 8. Paste that URL into `assets/config.js` as `API_URL`, commit, push.
 
-Until `API_URL` is filled in, the "Submit order" button simply doesn't
+Until `API_URL` is filled in, the "Send quote request" button simply doesn't
 appear on the public site, and the admin page can't load — email/copy-quote
 keep working regardless.
 
@@ -162,3 +171,4 @@ pricing):
 - If you ever outgrow this (need instant updates, real per-user accounts,
   etc.), the earlier Node/Express + SQLite version of this project is a
   drop-in upgrade path — ask to bring that back.
+

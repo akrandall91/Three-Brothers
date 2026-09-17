@@ -1,500 +1,62 @@
 (function () {
-  "use strict";
-
-  // ---- Business info: edit these directly and commit to update the site. ----
-  var BUSINESS = {
-    name: "H&L Wholesale Seafood",
-    phone: "305-842-0535",
-    email: "",
-    note: "We offer a wide variety of fresh and live seafood, including Dungeness crab, blue crab, lobster, fresh yellowfin tuna, clams (any size), and oysters (all kinds). Emergency weekend deliveries available. Prices are updated weekly and vary by product."
-  };
-
-  // ---- Endpoints live in assets/config.js (shared with admin.html). ----
-  var SHEET_CSV_URL = window.SITE_CONFIG.SHEET_CSV_URL;
-  var ORDERS_WEBHOOK_URL = window.SITE_CONFIG.API_URL;
-
-  var CAT_COLORS = {
-    "Shrimp": "#e2632f",
-    "Crab": "#c1442e",
-    "Lobster": "#1c8a5a",
-    "Salmon & Tuna": "#d94f6b",
-    "Octopus & Squid": "#6a4fb6",
-    "Mussels, Clams, Oysters & Scallops": "#2f7fb0",
-    "Tilapia, Catfish & Swai": "#3f9142",
-    "Crawfish": "#b8862f",
-    "Sauces, Prepared & Other": "#8a8f3f",
-    "Frog Legs & Exotic": "#4f9e8f",
-    "Fish (Whole & Fillet)": "#1c7788",
-    "Other Seafood": "#7a7a7a"
-  };
-  var CAT_ORDER = Object.keys(CAT_COLORS);
-  function catColor(c) { return CAT_COLORS[c] || "#7a7a7a"; }
-
-  var CART_KEY = "hlseafood_cart_v1";
-  var CUSTOMER_KEY = "hlseafood_customer_v1";
-
-  var liveData = { business: BUSINESS, items: [] };
-  var cart = loadJSON(CART_KEY, {});
-  var customer = loadJSON(CUSTOMER_KEY, { name: "", phone: "", notes: "" });
-  var ui = { q: "", cats: new Set(), sort: "cat", drawerOpen: false };
-
-  function loadJSON(key, fallback) {
-    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-    catch (e) { return fallback; }
-  }
-  function saveJSON(key, val) {
-    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
-  }
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
-    });
-  }
-  function fmtPrice(p) {
-    if (p == null || isNaN(p)) return "call";
-    return "$" + Number(p).toFixed(2);
-  }
-
-  // ---- Minimal RFC4180-ish CSV parser (handles quoted fields, "" escapes, commas/newlines in quotes) ----
-  function parseCSV(text) {
-    var rows = [];
-    var row = [];
-    var field = "";
-    var inQuotes = false;
-    for (var i = 0; i < text.length; i++) {
-      var c = text[i];
-      if (inQuotes) {
-        if (c === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else { inQuotes = false; }
-        } else {
-          field += c;
-        }
-      } else {
-        if (c === '"') inQuotes = true;
-        else if (c === ',') { row.push(field); field = ""; }
-        else if (c === '\r') { /* skip */ }
-        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ""; }
-        else field += c;
-      }
-    }
-    if (field.length || row.length) { row.push(field); rows.push(row); }
-    return rows.filter(function (r) { return r.length > 1 || (r.length === 1 && r[0] !== ""); });
-  }
-
-  function rowsToItems(rows) {
-    if (!rows.length) return [];
-    var header = rows[0].map(function (h) { return h.trim().toLowerCase(); });
-    var idx = {};
-    header.forEach(function (h, i) { idx[h] = i; });
-    var items = [];
-    for (var r = 1; r < rows.length; r++) {
-      var row = rows[r];
-      var get = function (key) { return idx[key] != null ? (row[idx[key]] || "").trim() : ""; };
-      var name = get("name");
-      if (!name) continue;
-      var priceRaw = get("price");
-      var qtyRaw = get("qty");
-      items.push({
-        id: get("id") || ("row" + r),
-        name: name,
-        pack: get("pack"),
-        price: priceRaw === "" ? null : Number(priceRaw),
-        unit: get("unit"),
-        case: get("case"),
-        qty: qtyRaw === "" ? null : Number(qtyRaw),
-        category: get("category") || "Other Seafood"
-      });
-    }
-    return items;
-  }
-
-  fetch(SHEET_CSV_URL + (SHEET_CSV_URL.indexOf("?") === -1 ? "?" : "&") + "cachebust=" + Date.now())
-    .then(function (r) { if (!r.ok) throw new Error("bad response " + r.status); return r.text(); })
-    .then(function (text) {
-      liveData.items = rowsToItems(parseCSV(text));
-      render();
-    })
-    .catch(function (err) {
-      document.getElementById("app").innerHTML =
-        '<div class="empty"><div class="big">⚠️</div>Could not load current prices right now. Please refresh, or call ' +
-        esc(BUSINESS.phone) + ' for pricing.</div>';
-      console.error("Catalog load failed:", err);
-    });
-
-  var toastTimer = null;
-  function toast(msg) {
-    var el = document.getElementById("toast");
-    if (el) el.remove();
-    el = document.createElement("div");
-    el.id = "toast"; el.className = "toast"; el.textContent = msg;
-    document.body.appendChild(el);
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { el.remove(); }, 3200);
-  }
-
-  function cartCount() { var n = 0; for (var k in cart) n += cart[k]; return n; }
-  function cartTotal(data) {
-    var t = 0;
-    for (var id in cart) { var it = findItem(data, id); if (it && it.price != null) t += it.price * cart[id]; }
-    return t;
-  }
-  function findItem(data, id) {
-    for (var i = 0; i < data.items.length; i++) if (data.items[i].id === id) return data.items[i];
-    return null;
-  }
-  function setCartQty(id, n) {
-    n = Math.max(0, Math.round(n));
-    if (n <= 0) delete cart[id]; else cart[id] = n;
-    saveJSON(CART_KEY, cart);
-  }
-
-  function render() {
-    var data = liveData;
-    var app = document.getElementById("app");
-    var html = "";
-    html += renderHero(data);
-    html += '<div class="wrap">';
-    html += renderControls(data);
-    html += '<div id="results">' + renderResults(data) + '</div>';
-    html += renderFooter(data);
-    html += '</div>';
-    if (cartCount() > 0) html += renderQuoteBar(data);
-    app.innerHTML = html;
-    wireEvents(data);
-    if (ui.drawerOpen) openDrawerDOM(data);
-  }
-
-  function renderHero(data) {
-    var b = data.business || {};
-    return '<header class="hero"><div class="inner">' +
-      '<div class="eyebrow"><span class="dot"></span>WHOLESALE PRICE LIST &middot; UPDATED WEEKLY</div>' +
-      '<h1>' + esc(b.name || "Seafood Catalog") + '</h1>' +
-      '<p class="tagline">' + data.items.length + ' items, priced by the pound &mdash; shrimp, crab, whole fish, fillets, shellfish and more. Search or filter, then build a quote.</p>' +
-      '<div class="hero-row">' +
-      (b.phone ? '<a class="phone-pill" href="tel:' + esc(b.phone.replace(/[^0-9+]/g, '')) + '">&#9742;&nbsp; ' + esc(b.phone) + '</a>' : '') +
-      '</div>' +
-      '</div></header>';
-  }
-
-  function renderControls(data) {
-    var counts = {};
-    data.items.forEach(function (it) { counts[it.category] = (counts[it.category] || 0) + 1; });
-    var chips = '<button type="button" class="chip" data-cat="__all__" aria-pressed="' + (ui.cats.size === 0) + '">All <span style="opacity:.6">(' + data.items.length + ')</span></button>';
-    CAT_ORDER.forEach(function (cat) {
-      if (!counts[cat]) return;
-      chips += '<button type="button" class="chip" data-cat="' + esc(cat) + '" aria-pressed="' + ui.cats.has(cat) + '">' +
-        '<span class="swatch" style="background:' + catColor(cat) + '"></span>' + esc(cat) + ' <span style="opacity:.6">(' + counts[cat] + ')</span></button>';
-    });
-    return '<div class="controls">' +
-      '<div class="search-row">' +
-      '<div class="search-box">' +
-      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-      '<input id="search" type="text" placeholder="Search item, pack size, category…" autocomplete="off" value="' + esc(ui.q) + '">' +
-      '</div>' +
-      '<select id="sort">' +
-      '<option value="cat"' + (ui.sort === "cat" ? " selected" : "") + '>Category</option>' +
-      '<option value="name"' + (ui.sort === "name" ? " selected" : "") + '>Name A–Z</option>' +
-      '<option value="price-asc"' + (ui.sort === "price-asc" ? " selected" : "") + '>Price: Low–High</option>' +
-      '<option value="price-desc"' + (ui.sort === "price-desc" ? " selected" : "") + '>Price: High–Low</option>' +
-      '</select>' +
-      '</div>' +
-      '<div class="chip-row" id="chips">' + chips + '</div>' +
-      '<div class="meta-row"><span><b id="count">0</b> items shown</span>' +
-      '<span id="clearWrap" style="display:none;"><a href="#" id="clearBtn" style="color:var(--coral);text-decoration:none;font-weight:600;">Clear filters ✕</a></span></div>' +
-      '</div>';
-  }
-
-  function filterSort(data) {
-    var q = ui.q.trim().toLowerCase();
-    var list = data.items.filter(function (it) {
-      if (ui.cats.size && !ui.cats.has(it.category)) return false;
-      if (q) {
-        var hay = (it.name + " " + it.pack + " " + it.category).toLowerCase();
-        if (hay.indexOf(q) === -1) return false;
-      }
-      return true;
-    });
-    if (ui.sort === "name") { list.sort(function (a, b) { return a.name.localeCompare(b.name); }); }
-    else if (ui.sort === "price-asc") { list.sort(function (a, b) { return (a.price == null ? 1e9 : a.price) - (b.price == null ? 1e9 : b.price); }); }
-    else if (ui.sort === "price-desc") { list.sort(function (a, b) { return (b.price == null ? -1 : b.price) - (a.price == null ? -1 : a.price); }); }
-    return list;
-  }
-
-  function renderResults(data) {
-    var list = filterSort(data);
-    if (!list.length) {
-      return '<div class="empty"><div class="big">🦐</div>No items match — try a different search or clear filters.</div>';
-    }
-    if (ui.sort !== "cat") {
-      return '<div class="group"><div class="card">' + list.map(viewRowHtml).join('') + '</div></div>';
-    }
-    var byCat = {};
-    list.forEach(function (it) { (byCat[it.category] = byCat[it.category] || []).push(it); });
-    var order = CAT_ORDER.filter(function (c) { return byCat[c]; });
-    Object.keys(byCat).forEach(function (c) { if (order.indexOf(c) === -1) order.push(c); });
-    return order.map(function (cat) {
-      var arr = byCat[cat];
-      return '<div class="group"><div class="group-title"><span class="swatch" style="background:' + catColor(cat) + '"></span>' + esc(cat) + ' <span class="count">(' + arr.length + ')</span></div>' +
-        '<div class="card">' + arr.map(viewRowHtml).join('') + '</div></div>';
-    }).join('');
-  }
-
-  function viewRowHtml(it) {
-    var subs = [];
-    if (it.pack) subs.push('<span>Pack ' + esc(it.pack) + '</span>');
-    if (it.case) subs.push('<span>' + esc(it.case) + '</span>');
-    if (it.qty != null && !isNaN(it.qty)) subs.push('<span>Qty ' + (it.qty % 1 === 0 ? it.qty.toFixed(0) : it.qty) + '</span>');
-    var inCart = cart[it.id] || 0;
-    var qtyControl = inCart > 0
-      ? '<div class="stepper" data-id="' + it.id + '"><button type="button" class="dec">&minus;</button><span class="n">' + inCart + '</span><button type="button" class="inc">+</button></div>'
-      : '<button type="button" class="add-btn" data-id="' + it.id + '">+ Add</button>';
-    return '<div class="item">' +
-      '<div class="name">' + esc(it.name) + '</div>' +
-      '<div class="sub">' + subs.join('') + '</div>' +
-      '<div class="price"><span class="amt">' + fmtPrice(it.price) + '</span><span class="per">per ' + esc(it.unit || 'unit') + '</span>' + qtyControl + '</div>' +
-      '</div>';
-  }
-
-  function renderFooter(data) {
-    var b = data.business || {};
-    return '<footer class="note">' +
-      (b.note ? esc(b.note) + ' ' : '') +
-      (b.phone ? 'Call <a href="tel:' + esc(b.phone.replace(/[^0-9+]/g, '')) + '" style="color:var(--coral);font-weight:700;text-decoration:none;">' + esc(b.phone) + '</a> to confirm current pricing and place an order.' : '') +
-      '</footer>';
-  }
-
-  function renderQuoteBar(data) {
-    return '<div class="quote-bar"><button type="button" id="openDrawer">🧺 View quote (' + cartCount() + ') <span class="total">' + fmtPrice(cartTotal(data)) + '</span></button></div>';
-  }
-
-  function openDrawerDOM(data) {
-    var wrap = document.createElement("div");
-    wrap.className = "drawer-overlay";
-    wrap.id = "drawerOverlay";
-    var ids = Object.keys(cart);
-    var rows = ids.map(function (id) {
-      var it = findItem(data, id);
-      if (!it) return "";
-      var lt = it.price != null ? it.price * cart[id] : null;
-      return '<div class="cart-row" data-id="' + id + '">' +
-        '<div class="info"><div class="n">' + esc(it.name) + '</div><div class="p">' + fmtPrice(it.price) + ' / ' + esc(it.unit) + '</div></div>' +
-        '<div class="stepper"><button type="button" class="dec">&minus;</button><span class="n">' + cart[id] + '</span><button type="button" class="inc">+</button></div>' +
-        '<div class="line-total">' + (lt == null ? "call" : fmtPrice(lt)) + '</div>' +
-        '</div>';
-    }).join('');
-    wrap.innerHTML = '<div class="drawer">' +
-      '<button type="button" class="close" id="closeDrawer">&times;</button>' +
-      '<h2>Your quote</h2>' +
-      '<div id="cartRows">' + (rows || '<p style="color:var(--ink-soft);font-size:13.5px;">Your quote is empty.</p>') + '</div>' +
-      '<div class="cart-total-row"><span>Estimated total</span><span>' + fmtPrice(cartTotal(data)) + '</span></div>' +
-      '<div class="cart-fields">' +
-      '<div class="field"><label>Your name</label><input id="custName" value="' + esc(customer.name) + '"></div>' +
-      '<div class="field"><label>Phone or callback number</label><input id="custPhone" value="' + esc(customer.phone) + '"></div>' +
-      '<div class="field"><label>Notes (delivery date, substitutions, etc.)</label><textarea id="custNotes">' + esc(customer.notes) + '</textarea></div>' +
-      '</div>' +
-      '<div class="preview-box" id="preview"></div>' +
-      '<div class="cart-actions">' +
-      (ORDERS_WEBHOOK_URL ? '<button type="button" class="btn coral" id="submitOrder">Submit order</button>' : '') +
-      '<a class="btn' + (ORDERS_WEBHOOK_URL ? '' : ' coral') + '" id="emailQuote" href="#">Email this quote</a>' +
-      '<button type="button" class="btn" id="copyQuote">Copy to clipboard</button>' +
-      '<button type="button" class="btn ghost" id="clearCart">Clear quote</button>' +
-      '</div>' +
-      '</div>';
-    document.body.appendChild(wrap);
-    updatePreview(data);
-    wrap.addEventListener("click", function (e) { if (e.target === wrap) closeDrawer(); });
-    document.getElementById("closeDrawer").onclick = closeDrawer;
-    wrap.querySelectorAll(".cart-row").forEach(function (row) {
-      var id = row.getAttribute("data-id");
-      row.querySelector(".inc").onclick = function () { setCartQty(id, (cart[id] || 0) + 1); refreshDrawer(data); };
-      row.querySelector(".dec").onclick = function () { setCartQty(id, (cart[id] || 0) - 1); refreshDrawer(data); };
-    });
-    ["custName", "custPhone", "custNotes"].forEach(function (id) {
-      document.getElementById(id).addEventListener("input", function () {
-        customer.name = document.getElementById("custName").value;
-        customer.phone = document.getElementById("custPhone").value;
-        customer.notes = document.getElementById("custNotes").value;
-        saveJSON(CUSTOMER_KEY, customer);
-        updatePreview(data);
-      });
-    });
-    document.getElementById("copyQuote").onclick = function () {
-      var text = buildOrderText(data);
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () { toast("Quote copied — paste it into a text or email."); });
-      } else { window.prompt("Copy this quote:", text); }
-    };
-    document.getElementById("clearCart").onclick = function () {
-      cart = {}; saveJSON(CART_KEY, cart); closeDrawer(); render();
-    };
-    var submitBtn = document.getElementById("submitOrder");
-    if (submitBtn) {
-      submitBtn.onclick = function () {
-        if (!cartCount()) { toast("Add at least one item first."); return; }
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Submitting…";
-        submitOrder(data, function () {
-          toast("Order submitted — we'll be in touch.");
-          cart = {}; saveJSON(CART_KEY, cart); closeDrawer(); render();
-        });
-      };
-    }
-    updateEmailLink(data);
-  }
-
-  // Posts the order to the Apps Script Web App via a hidden form + iframe,
-  // rather than fetch(), because Apps Script Web Apps don't send CORS
-  // headers a browser fetch() can read — a real form submission sidesteps
-  // that entirely. We can't inspect the response, so we assume success.
-  function submitOrder(data, done) {
-    var itemsText = Object.keys(cart).map(function (id) {
-      var it = findItem(data, id);
-      if (!it) return "";
-      var lt = it.price != null ? (it.price * cart[id]).toFixed(2) : "call";
-      return cart[id] + " x " + it.name + " (" + it.pack + ") @ " + fmtPrice(it.price) + "/" + it.unit + " = $" + lt;
-    }).join("\n");
-
-    var frameName = "orderFrame" + Date.now();
-    var iframe = document.createElement("iframe");
-    iframe.name = frameName;
-    iframe.style.display = "none";
-    document.body.appendChild(iframe);
-
-    var form = document.createElement("form");
-    form.method = "POST";
-    form.action = ORDERS_WEBHOOK_URL;
-    form.target = frameName;
-    form.style.display = "none";
-
-    var fields = {
-      name: customer.name,
-      phone: customer.phone,
-      notes: customer.notes,
-      items: itemsText,
-      total: fmtPrice(cartTotal(data))
-    };
-    Object.keys(fields).forEach(function (key) {
-      var input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = fields[key] || "";
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-
-    setTimeout(function () {
-      form.remove();
-      iframe.remove();
-      done();
-    }, 800);
-  }
-
-  function refreshDrawer(data) { closeDrawer(); ui.drawerOpen = true; render(); }
-
-  function updatePreview(data) {
-    var el = document.getElementById("preview");
-    if (el) el.textContent = buildOrderText(data);
-    updateEmailLink(data);
-    var barTotal = document.querySelector(".cart-total-row span:last-child");
-    if (barTotal) barTotal.textContent = fmtPrice(cartTotal(data));
-  }
-  function updateEmailLink(data) {
-    var a = document.getElementById("emailQuote");
-    if (!a) return;
-    var b = data.business || {};
-    var subject = "Order request — " + (b.name || "Seafood order");
-    var body = buildOrderText(data);
-    a.href = "mailto:" + (b.email || "") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-  }
-  function buildOrderText(data) {
-    var b = data.business || {};
-    var lines = [];
-    lines.push("Order request — " + (b.name || ""));
-    if (customer.name) lines.push("From: " + customer.name);
-    if (customer.phone) lines.push("Phone: " + customer.phone);
-    lines.push("");
-    var ids = Object.keys(cart);
-    if (!ids.length) { lines.push("(no items selected yet)"); }
-    ids.forEach(function (id) {
-      var it = findItem(data, id);
-      if (!it) return;
-      var lt = it.price != null ? (it.price * cart[id]).toFixed(2) : "call";
-      lines.push(cart[id] + " x " + it.name + " (" + it.pack + ") @ " + fmtPrice(it.price) + "/" + it.unit + " = $" + lt);
-    });
-    lines.push("");
-    lines.push("Estimated total: " + fmtPrice(cartTotal(data)));
-    if (customer.notes) { lines.push(""); lines.push("Notes: " + customer.notes); }
-    return lines.join("\n");
-  }
-  function closeDrawer() {
-    ui.drawerOpen = false;
-    var el = document.getElementById("drawerOverlay");
-    if (el) el.remove();
-  }
-
-  function wireEvents(data) {
-    var searchEl = document.getElementById("search");
-    if (searchEl) {
-      searchEl.addEventListener("input", function (e) {
-        ui.q = e.target.value;
-        document.getElementById("results").innerHTML = renderResults(liveData);
-        wireResultEvents(liveData);
-        updateMeta(liveData);
-      });
-    }
-    var sortEl = document.getElementById("sort");
-    if (sortEl) {
-      sortEl.addEventListener("change", function (e) {
-        ui.sort = e.target.value;
-        document.getElementById("results").innerHTML = renderResults(liveData);
-        wireResultEvents(liveData);
-      });
-    }
-    var chips = document.getElementById("chips");
-    if (chips) {
-      chips.addEventListener("click", function (e) {
-        var btn = e.target.closest(".chip");
-        if (!btn) return;
-        var cat = btn.getAttribute("data-cat");
-        if (cat === "__all__") ui.cats.clear();
-        else { if (ui.cats.has(cat)) ui.cats.delete(cat); else ui.cats.add(cat); }
-        render();
-      });
-    }
-    var clearBtn = document.getElementById("clearBtn");
-    if (clearBtn) {
-      clearBtn.addEventListener("click", function (e) {
-        e.preventDefault(); ui.q = ""; ui.cats.clear(); ui.sort = "cat"; render();
-      });
-    }
-    updateMeta(data);
-    wireResultEvents(data);
-
-    var openDrawerBtn = document.getElementById("openDrawer");
-    if (openDrawerBtn) openDrawerBtn.onclick = function () { ui.drawerOpen = true; openDrawerDOM(data); };
-  }
-
-  function updateMeta(data) {
-    var countEl = document.getElementById("count");
-    if (countEl) countEl.textContent = filterSort(data).length;
-    var clearWrap = document.getElementById("clearWrap");
-    if (clearWrap) clearWrap.style.display = (ui.q || ui.cats.size) ? "" : "none";
-  }
-
-  function wireResultEvents(data) {
-    var results = document.getElementById("results");
-    if (!results) return;
-    results.querySelectorAll(".add-btn").forEach(function (btn) {
-      btn.onclick = function () { setCartQty(btn.getAttribute("data-id"), 1); render(); };
-    });
-    results.querySelectorAll(".stepper").forEach(function (st) {
-      var id = st.getAttribute("data-id");
-      st.querySelector(".inc").onclick = function () { setCartQty(id, (cart[id] || 0) + 1); render(); };
-      st.querySelector(".dec").onclick = function () { setCartQty(id, (cart[id] || 0) - 1); render(); };
-    });
-  }
-
+"use strict";
+var B=window.BUSINESS_CONFIG,C=window.SITE_CONFIG,M=window.QuoteModel,app=document.getElementById("app");
+var items=[],cart=read("tb_quote_v2",{}),pending=read("tb_pending_v2",null),q="",category="",sort="category",failed=false,dialog=null,step=1,busy=false,sent="",error="";
+var customer={name:"",phone:"",business:"",location:"",fulfillment:"",address:"",date:"",substitutions:"Contact me first",notes:""};
+if(!cart||typeof cart!=="object"||Array.isArray(cart))cart={};
+if(!pending||typeof pending.reference!=="string")pending=null;
+function read(k,f){try{return JSON.parse(localStorage.getItem(k))||f;}catch(e){return f;}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function money(n){return n===null?"To confirm":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);}
+function tel(p){return "tel:"+p.replace(/[^0-9+]/g,"");}
+function offer(i){return M.offer(i,B);}
+function selected(){return items.filter(function(i){return M.quantity(cart[i.id]);});}
+function total(){return M.totals(items,cart,B);}
+function totalLabel(){var t=total();return t.pending===t.count&&t.count?"Pricing to confirm":(t.pending?"Priced items subtotal: ":"Estimated subtotal: ")+money(t.subtotal);}
+function qty(id,n){n=M.quantity(Math.min(9999,Math.max(0,Number(n))));if(n)cart[id]=n;else delete cart[id];save("tb_quote_v2",cart);}
+function csv(text){var out=[],row=[],f="",quoted=false;for(var i=0;i<text.length;i++){var c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){f+='"';i++;}else if(c==='"')quoted=false;else f+=c;}else if(c==='"')quoted=true;else if(c===','){row.push(f);f="";}else if(c==='\n'){row.push(f);out.push(row);row=[];f="";}else if(c!=='\r')f+=c;}if(f||row.length){row.push(f);out.push(row);}return out;}
+function parse(text){var rows=csv(text),headers=(rows.shift()||[]).map(function(h){return h.replace(/^\uFEFF/,"").trim().toLowerCase();}),seen=new Set();if(!headers.includes("name")||!headers.includes("price"))throw Error("Invalid data");return rows.map(function(r,n){var i={};headers.forEach(function(h,k){i[h]=(r[k]||"").trim();});i.id=i.id||"row"+n;i.category=i.category||"Other seafood";return i;}).filter(function(i){if(!i.name||seen.has(i.id))return false;seen.add(i.id);return true;});}
+function control(i){var o=offer(i),n=M.quantity(cart[i.id]);return n?'<div class="quantity"><button data-id="'+esc(i.id)+'" data-change="-1" aria-label="Remove one '+esc(o.orderUnit)+' of '+esc(i.name)+'">−</button><span>'+n+' <small>'+esc(M.plural(o.orderUnit,n))+'</small></span><button data-id="'+esc(i.id)+'" data-change="1" aria-label="Add one '+esc(o.orderUnit)+' of '+esc(i.name)+'">+</button></div>':'<button class="add-product" data-add="'+esc(i.id)+'">+ Add '+esc(o.orderUnit)+'</button>';}
+function product(i){var o=offer(i);return '<article class="product"><div><h3>'+esc(i.name)+'</h3><p class="pack">'+esc([i.pack?"Pack: "+i.pack:"",i.case].filter(Boolean).join(" · "))+'</p><p class="order-unit">Request by '+esc(o.orderUnit)+(o.weight&&o.orderUnit==="case"?" · "+o.weight+" lb per case":"")+'</p></div><div class="product-buy"><div class="product-price">'+(o.priceUnit?money(o.price)+'<span> / '+esc(o.priceUnit)+'</span>':"Request pricing")+'</div><p>'+esc(o.orderPrice===null?(o.priceUnit==="lb"?"Case weight & total to confirm":"Package & total to confirm"):money(o.orderPrice)+" / "+o.orderUnit)+'</p>'+control(i)+'</div></article>';}
+function filtered(){var search=q.trim().toLowerCase();return items.filter(function(i){return(!category||i.category===category)&&(!search||(i.name+" "+i.pack+" "+i.category).toLowerCase().includes(search));}).sort(function(a,b){return sort==="name"?a.name.localeCompare(b.name):a.category.localeCompare(b.category);});}
+function results(){var list=filtered(),groups=[];if(!list.length)return '<div class="no-results"><h3>No matches found</h3><p>Try another product or category.</p><button class="secondary" data-clear>Clear filters</button></div>';list.forEach(function(i){var name=sort==="name"?"Products":i.category,last=groups[groups.length-1];if(!last||last.name!==name){last={name:name,items:[]};groups.push(last);}last.items.push(i);});return groups.map(function(g){return '<section class="product-group"><h2>'+esc(g.name)+' <span>'+g.items.length+'</span></h2><div class="product-list">'+g.items.map(product).join("")+'</div></section>';}).join("");}
+function services(){return '<section id="service"><div class="section-heading"><div><span class="kicker">PLAN YOUR REQUEST</span><h2>Delivery & pickup, made clear.</h2></div></div><div class="service-grid"><article><span class="service-number">01</span><h3>Delivery</h3><p>'+esc(B.deliveryAreas||"Tell us your address. Our team will confirm whether we can deliver to you.")+'</p><dl><dt>Minimum order</dt><dd>'+esc(B.deliveryMinimum||"Confirm with our team")+'</dd><dt>Delivery fee</dt><dd>'+esc(B.deliveryFees||"Confirmed with your quote")+'</dd><dt>Schedule & cutoff</dt><dd>'+esc([B.deliverySchedule,B.orderCutoff].filter(Boolean).join(" · ")||"Call to confirm before planning your order")+'</dd></dl></article><article><span class="service-number">02</span><h3>Store pickup</h3><p>Choose your preferred store. We will confirm pickup availability and timing.</p>'+B.locations.map(function(l){return '<div class="location"><strong>'+esc(l.name)+'</strong><address>'+esc(l.address)+'</address><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(l.address)+'" target="_blank" rel="noopener">Directions ↗</a>'+(l.phone?' · <a href="'+tel(l.phone)+'">'+esc(l.phone)+'</a>':'')+'</div>';}).join("")+'<p class="small">Call to confirm pickup hours. Store hours and wholesale pickup times may differ.</p></article><article><span class="service-number">03</span><h3>A real conversation</h3><p>'+esc(B.customerTypes)+'</p><p>'+esc(B.weekendNote)+'</p><a class="primary" href="'+tel(B.phone)+'">Call '+esc(B.phone)+'</a><a class="email-link" href="mailto:'+esc(B.email)+'">Email wholesale inquiries ↗</a></article></div></section>';}
+function render(){var cats=Array.from(new Set(items.map(function(i){return i.category;}))).sort();app.innerHTML='<a class="skip-link" href="#catalog">Skip to products</a><header class="store-header"><a class="brand" href="'+esc(B.website)+'"><span class="brand-mark" aria-hidden="true">III</span><span>'+esc(B.name)+'<small>WHOLESALE CATALOG</small></span></a><nav aria-label="Main navigation"><a href="#catalog">Shop catalog</a><a href="#service">Delivery & pickup</a><a class="nav-phone" href="'+tel(B.phone)+'">Call wholesale</a></nav></header><main><section class="store-hero"><div><span class="kicker">YOUR NEXT GREAT CATCH</span><h1>Good seafood.<br>Simple ordering.</h1><p>Find what you need, choose your quantities, and let our team confirm your quote.</p><div class="hero-actions"><a class="primary" href="#catalog">Browse the catalog ↓</a><a class="hero-secondary" href="'+tel(B.phone)+'">'+esc(B.phone)+'</a></div></div><aside class="hero-card"><span class="kicker">FROM OUR CATALOG TO YOUR KITCHEN</span><ol><li><span>01</span><div><strong>Build your list</strong><p>Clear units for every product.</p></div></li><li><span>02</span><div><strong>Tell us what works</strong><p>Choose a location and request delivery or pickup.</p></div></li><li><span>03</span><div><strong>We confirm the details</strong><p>Availability, final pricing, and timing.</p></div></li></ol><div class="hero-card-foot">No payment required to request a quote.</div></aside></section><div class="store-body"><div class="location-notice"><strong>Greensboro, NC & Roanoke, VA</strong><span>Prices, inventory, and specials vary by location. This wholesale catalog is a starting point; your location’s pricing will be confirmed.</span></div><section id="catalog" aria-labelledby="catalog-title"><div class="section-heading"><div><span class="kicker">FIND YOUR FAVORITES</span><h2 id="catalog-title">The seafood catalog</h2></div><span class="catalog-status">'+esc(B.pricesUpdated?"Prices updated "+B.pricesUpdated:"Confirm current pricing with your quote")+'</span></div><div class="catalog-controls"><div class="search-field"><label for="search">Search products</label><input id="search" type="search" placeholder="Try shrimp, salmon, or a pack size…" value="'+esc(q)+'"></div><div><label for="category">Category</label><select id="category"><option value="">All categories</option>'+cats.map(function(c){return '<option value="'+esc(c)+'" '+(c===category?'selected':'')+'>'+esc(c)+'</option>';}).join("")+'</select></div><div><label for="sort">Sort by</label><select id="sort"><option value="category">Category</option><option value="name" '+(sort==="name"?'selected':'')+'>Name A–Z</option></select></div></div><div class="catalog-meta"><span id="resultCount" role="status">'+filtered().length+' products</span><button class="text-button" data-clear>Reset filters</button></div><p class="unit-note">Prices are shown per lb, case, box, bag, or each. The Add button identifies the unit you are requesting. Unverified case weights are confirmed with your quote.</p><div id="results">'+(failed?'<div class="no-results"><h3>We couldn’t load current products.</h3><p>Your saved list is still on this device. Try again or call us.</p><button class="primary" id="retry">Try again</button> <a href="'+tel(B.phone)+'">Call '+esc(B.phone)+'</a></div>':results())+'</div></section>'+services()+'<footer class="store-footer"><div><strong>'+esc(B.name)+'</strong><p>Seafood for your business and your table.</p></div><a href="'+esc(B.website)+'">Visit our main website ↗</a><p class="small">A quote request is not a confirmed order. Final weights, pricing, availability, delivery fees, and taxes are confirmed by our team.</p></footer></div></main><div id="quoteBar"></div>';
+document.getElementById("search").oninput=function(e){q=e.target.value;refresh();};document.getElementById("category").onchange=function(e){category=e.target.value;refresh();};document.getElementById("sort").onchange=function(e){sort=e.target.value;refresh();};if(document.getElementById("retry"))document.getElementById("retry").onclick=load;bar();}
+function refresh(){document.getElementById("results").innerHTML=results();document.getElementById("resultCount").textContent=filtered().length+" products";}
+function bar(){var t=total();document.getElementById("quoteBar").innerHTML=t.count||pending?'<div class="quote-dock"><div><strong>'+t.count+' product'+(t.count===1?"":"s")+' in your quote</strong><span>'+esc(pending?"Previous request needs confirmation":totalLabel())+'</span></div><button class="primary" id="viewQuote">Review quote →</button></div>':"";if(document.getElementById("viewQuote"))document.getElementById("viewQuote").onclick=open;}
+function change(e,inside){var a=e.target.closest("[data-add]"),c=e.target.closest("[data-change]");if(!a&&!c)return;var id=a?a.dataset.add:c.dataset.id,delta=a?1:Number(c.dataset.change);qty(id,a?1:(cart[id]||0)+delta);if(inside)draw();refresh();bar();var parent=inside?dialog:app;var next=Array.from(parent.querySelectorAll("[data-id],[data-add]")).find(function(b){return b.dataset.id===id&&b.dataset.change===String(delta)||b.dataset.add===id;});if(next)next.focus();}
+app.addEventListener("click",function(e){change(e,false);if(e.target.closest("[data-clear]")){q="";category="";sort="category";document.getElementById("search").value="";document.getElementById("category").value="";document.getElementById("sort").value="category";refresh();}});
+function open(){if(dialog)return;step=1;error="";dialog=document.createElement("dialog");dialog.className="quote-dialog";dialog.setAttribute("aria-label","Your seafood quote request");document.body.appendChild(dialog);draw();dialog.showModal();document.body.classList.add("quote-open");dialog.addEventListener("close",function(){dialog.remove();dialog=null;document.body.classList.remove("quote-open");bar();var b=document.getElementById("viewQuote");if(b)b.focus();});dialog.addEventListener("cancel",function(e){if(busy)e.preventDefault();});dialog.addEventListener("click",function(e){change(e,true);});}
+function close(){if(!busy&&dialog)dialog.close();}
+function dateToday(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function field(k,label,type,required){return '<div class="form-field"><label for="c-'+k+'">'+esc(label)+(required?" *":"")+'</label><input id="c-'+k+'" name="'+k+'" type="'+type+'" value="'+esc(customer[k])+'" maxlength="200" '+(required?"required ":"")+(type==="date"?'min="'+dateToday()+'"':"")+' autocomplete="'+({name:"name",phone:"tel",business:"organization",address:"street-address"}[k]||"off")+'"></div>';}
+function select(k,label,options){return '<div class="form-field"><label for="c-'+k+'">'+label+' *</label><select id="c-'+k+'" name="'+k+'" required><option value="">Choose an option</option>'+options.map(function(o){return '<option value="'+esc(o[0])+'" '+(customer[k]===o[0]?"selected":"")+'>'+esc(o[1])+'</option>';}).join("")+'</select></div>';}
+function totalsHTML(){var t=total();return '<div class="quote-total"><strong>'+esc(t.pending?"Priced items subtotal":"Estimated merchandise subtotal")+'</strong><strong>'+(t.pending===t.count&&t.count?"To confirm":money(t.subtotal))+'</strong></div>'+(t.pending?'<p class="pending-prices">'+t.pending+' product'+(t.pending===1?" needs":"s need")+' pricing or case-weight confirmation. '+(t.pending===t.count?"No complete total is available yet.":"These products are not included in the subtotal.")+'</p>':"")+'<p class="small">Final weights, location pricing, availability, delivery fees, and taxes are confirmed by our team.</p>';}
+function place(){var l=B.locations.find(function(l){return l.id===customer.location;});return l?l.name:"Not selected";}
+function itemLines(){return selected().map(function(i){var o=offer(i),n=cart[i.id];return n+" "+M.plural(o.orderUnit,n)+" × "+i.name+(i.pack?" (pack "+i.pack+")":"")+" | "+money(o.price)+(o.priceUnit?"/"+o.priceUnit:"")+" | Line estimate: "+money(o.orderPrice===null?null:o.orderPrice*n);}).join("\n");}
+function notes(ref){return(ref?"Reference: "+ref+"\n":"")+"Business: "+(customer.business||"Not provided")+"\nLocation: "+place()+"\nFulfillment: "+customer.fulfillment+(customer.fulfillment==="delivery"?"\nAddress: "+customer.address:"")+"\nRequested date: "+(customer.date||"Arrange with team")+"\nSubstitutions: "+customer.substitutions+"\nNotes: "+customer.notes+"\nQuote request only. Weights, prices, availability, fees, and taxes to be confirmed.";}
+function orderText(){return "Wholesale quote request — "+B.name+"\nName: "+customer.name+"\nPhone: "+customer.phone+"\n"+notes()+"\n\n"+itemLines()+"\n\n"+totalLabel();}
+function draw(){var html="";
+if(sent)html='<div class="success-panel" role="status"><span class="success-icon" aria-hidden="true">✓</span><h3>Quote request received</h3><p>Reference <strong>'+esc(sent)+'</strong></p><p>Our team will contact you to confirm pricing, availability, and delivery or pickup. Your order is not confirmed yet.</p>'+(B.responseTime?'<p>'+esc(B.responseTime)+'</p>':"")+'<button class="primary" id="done">Continue shopping</button></div>';
+else if(pending&&!busy)html='<div class="request-warning" role="alert"><h3>Check your previous request before sending again</h3><p>We could not verify whether request <strong>'+esc(pending.reference)+'</strong> was received. Your list is saved. Contact our team with this reference to avoid a duplicate request.</p><a class="primary" href="'+tel(B.phone)+'">Call to confirm</a><button class="secondary" id="resolve">I checked with the team</button></div>';
+else if(!total().count)html='<div class="no-results"><h3>Your quote is empty</h3><p>Add products from the catalog to get started.</p><button class="primary" id="done">Browse products</button></div>';
+else if(step===1)html='<p class="step-intro">Choose how many cases, boxes, bags, or individual units you would like us to quote.</p>'+selected().map(function(i){var o=offer(i);return '<article class="quote-item"><div><h3>'+esc(i.name)+'</h3><p>'+money(o.price)+(o.priceUnit?" / "+esc(o.priceUnit):"")+" · Request by "+esc(o.orderUnit)+'</p></div>'+control(i)+'<strong>'+money(o.orderPrice===null?null:o.orderPrice*cart[i.id])+'</strong></article>';}).join("")+totalsHTML()+'<button class="primary full-width" id="next">Next: delivery & contact →</button>';
+else if(step===2)html='<form id="details"><p class="step-intro">A requested date is a preference. We will confirm availability with you.</p><div class="form-grid">'+select("location","Preferred location",B.locations.map(function(l){return[l.id,l.name];}))+select("fulfillment","How would you like your order?",[["delivery","Request delivery"],["pickup","Request store pickup"]])+field("name","Your name","text",true)+field("phone","Callback number","tel",true)+field("business","Business name (optional)","text",false)+field("date","Requested date (optional)","date",false)+'</div><div id="addressField" '+(customer.fulfillment==="delivery"?"":"hidden")+'>'+field("address","Delivery address","text",customer.fulfillment==="delivery")+'</div><div class="form-field"><label for="c-substitutions">If an item is unavailable</label><select id="c-substitutions" name="substitutions">'+["Contact me first","No substitutions"].map(function(s){return '<option '+(customer.substitutions===s?"selected":"")+'>'+s+'</option>';}).join("")+'</select></div><div class="form-field"><label for="c-notes">Anything else we should know? (optional)</label><textarea id="c-notes" name="notes" maxlength="2000">'+esc(customer.notes)+'</textarea></div><p class="small">Your contact details are used to respond to this request. Required fields are marked *.</p><div class="form-actions"><button class="secondary" type="button" id="back">Back</button><button class="primary" type="submit">Review request →</button></div></form>';
+else html='<p class="step-intro">Check your details before sending. No payment is collected here.</p><dl class="request-details"><dt>Contact</dt><dd>'+esc(customer.name)+" · "+esc(customer.phone)+'</dd>'+(customer.business?'<dt>Business</dt><dd>'+esc(customer.business)+'</dd>':"")+'<dt>Location</dt><dd>'+esc(place())+'</dd><dt>Fulfillment</dt><dd>'+esc(customer.fulfillment==="delivery"?"Delivery requested":"Pickup requested")+'</dd>'+(customer.fulfillment==="delivery"?'<dt>Address</dt><dd>'+esc(customer.address)+'</dd>':"")+'<dt>Date</dt><dd>'+esc(customer.date||"Arrange with our team")+'</dd><dt>Substitutions</dt><dd>'+esc(customer.substitutions)+'</dd>'+(customer.notes?'<dt>Notes</dt><dd>'+esc(customer.notes)+'</dd>':"")+'</dl><details class="quote-preview"><summary>Review '+total().count+' selected products</summary><pre>'+esc(itemLines())+'</pre></details>'+totalsHTML()+'<p class="form-error" role="alert">'+esc(error)+'</p><div class="form-actions"><button class="secondary" id="back" '+(busy?"disabled":"")+'>Edit details</button>'+(C.API_URL?'<button class="primary" id="send" '+(busy?"disabled":"")+'>'+(busy?"Sending request…":"Send quote request")+'</button>':"")+'</div>'+(!busy?'<div class="alternative-actions">'+(B.email?'<a href="mailto:'+esc(B.email)+'?subject='+encodeURIComponent("Wholesale quote request — "+B.name)+'&body='+encodeURIComponent(orderText())+'">Open request in email</a>':"")+'<button class="text-button" id="copy">Copy request</button></div><p class="small">Email opens a draft in your email app; send it there to complete the request.</p>':"");
+dialog.innerHTML='<div class="dialog-header"><div><span class="kicker">LET’S BUILD YOUR QUOTE</span><h2>Your seafood request</h2></div><button class="close-quote" id="close" aria-label="Close quote" '+(busy?"disabled":"")+'>×</button></div>'+(!sent&&!pending?'<ol class="quote-steps" aria-label="Quote progress">'+["Products","Your details","Review & send"].map(function(s,i){return '<li '+(step===i+1?'aria-current="step"':"")+'><span>'+(i+1)+'</span>'+s+'</li>';}).join("")+'</ol>':"")+'<div class="dialog-content">'+html+'</div>';
+document.getElementById("close").onclick=close;
+if(document.getElementById("done"))document.getElementById("done").onclick=function(){sent="";close();};
+if(document.getElementById("next"))document.getElementById("next").onclick=function(){step=2;draw();};
+if(document.getElementById("back"))document.getElementById("back").onclick=function(){step--;draw();};
+var form=document.getElementById("details");if(form){form.oninput=form.onchange=function(e){if(e.target.name)customer[e.target.name]=e.target.value;if(e.target.setCustomValidity)e.target.setCustomValidity("");if(e.target.name==="fulfillment"){document.getElementById("addressField").hidden=customer.fulfillment!=="delivery";document.getElementById("c-address").required=customer.fulfillment==="delivery";document.querySelector('label[for="c-address"]').textContent="Delivery address"+(customer.fulfillment==="delivery"?" *":"");}};form.onsubmit=function(e){e.preventDefault();["name","phone","address"].forEach(function(k){customer[k]=customer[k].trim();});document.getElementById("c-name").setCustomValidity(customer.name?"":"Please enter your name.");document.getElementById("c-phone").setCustomValidity(customer.phone.replace(/\D/g,"").length>=7?"":"Enter a callback number with at least 7 digits.");document.getElementById("c-address").setCustomValidity(customer.fulfillment==="delivery"&&!customer.address?"Please enter a delivery address.":"");if(!form.reportValidity())return;step=3;draw();};}
+if(document.getElementById("send"))document.getElementById("send").onclick=submit;
+if(document.getElementById("copy"))document.getElementById("copy").onclick=async function(){try{await navigator.clipboard.writeText(orderText());this.textContent="Copied";}catch(e){error="Copy is unavailable. Use the email option or call us.";draw();}};
+if(document.getElementById("resolve"))document.getElementById("resolve").onclick=function(){dialog.querySelector(".dialog-content").innerHTML='<h3>What did the team confirm?</h3><p>Only send a new request if the team confirmed the previous one was not received.</p><div class="form-actions"><button class="primary" id="received">They received it</button><button class="secondary" id="missing">They did not receive it</button></div><button class="text-button" id="unsure">I’m still not sure</button>';document.getElementById("received").onclick=function(){sent=pending.reference;pending=null;save("tb_pending_v2",null);cart={};save("tb_quote_v2",cart);refresh();bar();draw();};document.getElementById("missing").onclick=function(){pending=null;save("tb_pending_v2",null);step=1;draw();bar();};document.getElementById("unsure").onclick=draw;};
+dialog.scrollTop=0;var h=dialog.querySelector("h2");h.tabIndex=-1;h.focus();}
+async function submit(){if(busy||pending||!total().count)return;busy=true;error="";var ref="TB-"+(crypto.randomUUID?crypto.randomUUID().slice(0,8).toUpperCase():Date.now().toString(36).toUpperCase());pending={reference:ref};save("tb_pending_v2",pending);draw();var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},25000);
+try{var r=await fetch(C.API_URL,{method:"POST",body:new URLSearchParams({action:"submitOrder",name:customer.name,phone:customer.phone,notes:notes(ref),items:itemLines(),total:totalLabel()}),signal:controller.signal});if(!r.ok)throw Error("Unconfirmed");var result=await r.json();if(result.error){pending=null;save("tb_pending_v2",null);error="The request was not accepted. Please call "+B.phone+" or send your request by email.";}else if(result.ok===true){pending=null;save("tb_pending_v2",null);sent=ref;cart={};save("tb_quote_v2",cart);Object.keys(customer).forEach(function(k){customer[k]="";});customer.substitutions="Contact me first";}else throw Error("Unconfirmed");}catch(e){/* Keep quote and reference: the request may have reached the server. */}finally{clearTimeout(timer);busy=false;draw();refresh();bar();}}
+async function load(){app.innerHTML='<div class="loading-state" role="status"><span class="brand-mark">III</span><h1>'+esc(B.name)+'</h1><p>Loading the seafood catalog…</p></div>';var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},20000);try{var r=await fetch(C.SHEET_CSV_URL,{signal:controller.signal});if(!r.ok)throw Error("Unavailable");items=parse(await r.text());if(!items.length)throw Error("Empty");failed=false;}catch(e){failed=true;}finally{clearTimeout(timer);render();}}
+load();
 })();
