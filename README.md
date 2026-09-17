@@ -48,6 +48,36 @@ These change rarely, so they're hardcoded at the top of `assets/catalog.js`
 in the `BUSINESS` object, not in the sheet. Edit that, commit, and push (or
 edit directly on github.com) to change them.
 
+## Order tracking
+
+When a customer clicks **Submit order** in the quote drawer, the order is
+appended as a new row to a separate sheet:
+[Three Brothers Seafood — Orders](https://docs.google.com/spreadsheets/d/1JEjOll-vI-zzvJ0MB8JgpU52t2DxdNLpHYrX8b3w4qQ/edit)
+(columns: timestamp, customer_name, customer_phone, items, total, notes, status).
+Open that sheet to see incoming orders, and hand-edit the `status` column
+(e.g. `New` → `Fulfilled` → `Paid`) as you work through them.
+
+**This needs a one-time setup step you have to do yourself** (writing to a
+sheet requires a small script with your Google authorization — there's no
+way to automate the deploy click):
+
+1. Open the Orders sheet (link above) → **Extensions → Apps Script**.
+2. Delete any starter code, then paste in the contents of
+   [`apps-script/Code.gs`](apps-script/Code.gs) from this repo.
+3. Click **Deploy → New deployment**. For "Select type," choose **Web app**.
+4. Set **Execute as: Me**, **Who has access: Anyone**. Click **Deploy**.
+5. Google will ask you to authorize the script (it's yours, so this is safe)
+   — approve it.
+6. Copy the **Web app URL** it gives you (ends in `/exec`).
+7. Paste that URL into `assets/catalog.js` as `ORDERS_WEBHOOK_URL`, commit, push.
+
+Until `ORDERS_WEBHOOK_URL` is filled in, the "Submit order" button simply
+doesn't appear — email/copy-quote keep working regardless.
+
+If you ever change the script's code, you need to create a **new** deployment
+(or use "Manage deployments" → edit → new version) for the change to take effect;
+just saving the script file does not update a live `/exec` URL.
+
 ## Hosting on GitHub Pages
 
 1. Push this repo to GitHub (already done if you're reading this from the repo).
@@ -64,7 +94,10 @@ index.html            the whole page shell
 assets/
   style.css            all styling
   catalog.js           fetches the sheet, renders the catalog, cart/quote logic
-                        (also where BUSINESS info and the sheet URL live)
+                        (also where BUSINESS info, SHEET_CSV_URL and
+                        ORDERS_WEBHOOK_URL live)
+apps-script/
+  Code.gs               paste into the Orders sheet's Apps Script editor
 legacy/
   Price List- Three Brothers Seafood .xlsx   original spreadsheet, kept for reference
   seafood-price-list.html                     original single-file static version

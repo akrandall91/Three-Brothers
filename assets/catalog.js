@@ -17,6 +17,12 @@
   // anonymous visitors — only "Publish to the web" does.)
   var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAlMorq-Qm00CunOdRydhqFnABThudytc-OkFPD4SmXsEi-_BYiCbNIWpPj0ENNCK0KD5BgrMkxyKo/pub?output=csv";
 
+  // ---- Submitted orders get appended as rows to a separate "Orders" Google
+  // Sheet via a Google Apps Script Web App (see apps-script/Code.gs and the
+  // README's "Order tracking" section for how to set this up). Leave blank
+  // to disable the "Submit order" button (email/copy quote still work).
+  var ORDERS_WEBHOOK_URL = "";
+
   var CAT_COLORS = {
     "Shrimp": "#e2632f",
     "Crab": "#c1442e",
@@ -299,7 +305,8 @@
       '</div>' +
       '<div class="preview-box" id="preview"></div>' +
       '<div class="cart-actions">' +
-      '<a class="btn coral" id="emailQuote" href="#">Email this quote</a>' +
+      (ORDERS_WEBHOOK_URL ? '<button type="button" class="btn coral" id="submitOrder">Submit order</button>' : '') +
+      '<a class="btn' + (ORDERS_WEBHOOK_URL ? '' : ' coral') + '" id="emailQuote" href="#">Email this quote</a>' +
       '<button type="button" class="btn" id="copyQuote">Copy to clipboard</button>' +
       '<button type="button" class="btn ghost" id="clearCart">Clear quote</button>' +
       '</div>' +
@@ -331,7 +338,68 @@
     document.getElementById("clearCart").onclick = function () {
       cart = {}; saveJSON(CART_KEY, cart); closeDrawer(); render();
     };
+    var submitBtn = document.getElementById("submitOrder");
+    if (submitBtn) {
+      submitBtn.onclick = function () {
+        if (!cartCount()) { toast("Add at least one item first."); return; }
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting…";
+        submitOrder(data, function () {
+          toast("Order submitted — we'll be in touch.");
+          cart = {}; saveJSON(CART_KEY, cart); closeDrawer(); render();
+        });
+      };
+    }
     updateEmailLink(data);
+  }
+
+  // Posts the order to the Apps Script Web App via a hidden form + iframe,
+  // rather than fetch(), because Apps Script Web Apps don't send CORS
+  // headers a browser fetch() can read — a real form submission sidesteps
+  // that entirely. We can't inspect the response, so we assume success.
+  function submitOrder(data, done) {
+    var itemsText = Object.keys(cart).map(function (id) {
+      var it = findItem(data, id);
+      if (!it) return "";
+      var lt = it.price != null ? (it.price * cart[id]).toFixed(2) : "call";
+      return cart[id] + " x " + it.name + " (" + it.pack + ") @ " + fmtPrice(it.price) + "/" + it.unit + " = $" + lt;
+    }).join("\n");
+
+    var frameName = "orderFrame" + Date.now();
+    var iframe = document.createElement("iframe");
+    iframe.name = frameName;
+    iframe.style.display = "none";
+    document.body.appendChild(iframe);
+
+    var form = document.createElement("form");
+    form.method = "POST";
+    form.action = ORDERS_WEBHOOK_URL;
+    form.target = frameName;
+    form.style.display = "none";
+
+    var fields = {
+      name: customer.name,
+      phone: customer.phone,
+      notes: customer.notes,
+      items: itemsText,
+      total: fmtPrice(cartTotal(data))
+    };
+    Object.keys(fields).forEach(function (key) {
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = key;
+      input.value = fields[key] || "";
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+
+    setTimeout(function () {
+      form.remove();
+      iframe.remove();
+      done();
+    }, 800);
   }
 
   function refreshDrawer(data) { closeDrawer(); ui.drawerOpen = true; render(); }
