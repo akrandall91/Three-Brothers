@@ -10,10 +10,12 @@
   };
 
   // ---- Item prices/pack/etc. live in a Google Sheet, published as CSV. ----
-  // To point this at a different sheet: File > Share > General access > Anyone
-  // with the link > Viewer, then use its export URL here:
-  //   https://docs.google.com/spreadsheets/d/<SHEET_ID>/export?format=csv&gid=0
-  var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/16FrglTqX1rhFjZyDKOXoMxBLbvKKI4Eya6p_phMseQA/export?format=csv&gid=0";
+  // To point this at a different sheet: File > Share > Publish to web > select
+  // the sheet > CSV > Publish, then paste the URL it gives you here. It looks
+  // like: https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv
+  // (Plain "anyone with the link" sharing + the /export URL does NOT work for
+  // anonymous visitors — only "Publish to the web" does.)
+  var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAlMorq-Qm00CunOdRydhqFnABThudytc-OkFPD4SmXsEi-_BYiCbNIWpPj0ENNCK0KD5BgrMkxyKo/pub?output=csv";
 
   var CAT_COLORS = {
     "Shrimp": "#e2632f",

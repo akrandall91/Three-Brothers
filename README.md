@@ -6,17 +6,24 @@ is just editing a spreadsheet.
 
 **Live data:** [Three Brothers Seafood — Price List (live)](https://docs.google.com/spreadsheets/d/16FrglTqX1rhFjZyDKOXoMxBLbvKKI4Eya6p_phMseQA/edit)
 
-## One-time setup (do this before the site will show prices)
+## One-time setup (already done for this sheet)
 
-The sheet needs to be link-viewable so the page can fetch it as CSV:
+The site fetches the sheet as CSV with no login, which needs **Publish to the
+web**, not just link-sharing (plain "anyone with the link" sharing plus the
+`/export` URL looks like it should work but silently fails for anonymous
+visitors — Publish to the web is the endpoint actually built for this):
 
-1. Open the sheet (link above).
-2. **Share → General access → change "Restricted" to "Anyone with the link" → Viewer.**
-3. That's it — no password, no login needed to view the sheet's data this way,
-   but only people with **edit** access (still just you, unless you share it)
-   can change it.
+1. In the sheet: **File → Share → Publish to web.**
+2. Under "Link", choose the sheet/tab and **CSV** as the format, then **Publish**.
+3. Copy the URL it gives you (looks like
+   `https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv`) and
+   put it in `assets/catalog.js` as `SHEET_CSV_URL`.
+4. Note: republishing after big structural changes (e.g. adding a column) can
+   sometimes require re-publishing to pick up the new shape — if the site
+   stops updating, revisit this step.
 
-Until you do this, the site will show a "could not load current prices" message.
+If the site ever shows "could not load current prices," this is the first
+thing to check — confirm the publish is still active and the URL still matches.
 
 ## Editing prices day-to-day
 
@@ -79,10 +86,10 @@ pricing):
 
 ## Limits of this approach
 
-- The Google Sheet is viewable (read-only) by anyone with its link, since
-  that's what lets the static page fetch it without a backend. It's not
-  indexed or discoverable, but the link itself isn't a secret. Fine for a
-  price list; don't put anything sensitive in that sheet.
+- The published sheet is world-readable (that's the point — it's what lets
+  the static page fetch it with no backend and no login). The published CSV
+  URL is a long random token, not indexed anywhere, but treat it as public:
+  don't put anything sensitive in that sheet.
 - No login-gated admin page — anyone you share edit access to the sheet with
   can change prices. Manage that the same way you'd manage who can edit a
   shared spreadsheet.
