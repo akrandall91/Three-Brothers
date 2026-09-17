@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>H&amp;L Seafood Catalog</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  :root{
+    --navy:#0d3140;
+    --teal:#12586a;
+    --teal-2:#1c7788;
+    --foam:#f2f8f7;
+    --paper:#ffffff;
+    --ink:#0c2530;
+    --ink-soft:#4d6067;
+    --line:#d7e6e5;
+    --coral:#e2632f;
+    --coral-soft:#fbe4d7;
+    --good:#1c8a5a;
+    --bad:#c1442e;
+    --admin:#6a4fb6;
+    --admin-soft:#ece7fb;
+    --shadow: 0 1px 2px rgba(13,49,64,0.06), 0 6px 20px -8px rgba(13,49,64,0.18);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --navy:#dff3ef; --teal:#7fd6cf; --teal-2:#5cc2ba;
+      --foam:#0a1f26; --paper:#0f2932; --ink:#eaf3f1; --ink-soft:#a9c0be;
+      --line:#204048; --coral:#ff8a54; --coral-soft:#3a2417; --good:#4fd190; --bad:#ff7a63;
+      --admin:#b6a4f2; --admin-soft:#241c3a;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --navy:#dff3ef; --teal:#7fd6cf; --teal-2:#5cc2ba;
+    --foam:#0a1f26; --paper:#0f2932; --ink:#eaf3f1; --ink-soft:#a9c0be;
+    --line:#204048; --coral:#ff8a54; --coral-soft:#3a2417; --good:#4fd190; --bad:#ff7a63;
+    --admin:#b6a4f2; --admin-soft:#241c3a;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.5);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--foam); color:var(--ink);
+    font-family:"Work Sans",system-ui,sans-serif;
+    margin:0; -webkit-tap-highlight-color:transparent;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+  .wrap{max-width:920px;margin:0 auto;padding:0 16px 100px;}
+
+  /* ---------- Header ---------- */
+  header.hero{
+    background:
+      radial-gradient(1100px 320px at 15% -20%, rgba(255,255,255,0.08), transparent 60%),
+      linear-gradient(160deg, var(--navy), var(--teal-2));
+    color:#f4faf9;
+    padding:24px 16px 22px;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) header.hero{ color:#04141a; } }
+  :root[data-theme="dark"] header.hero{ color:#04141a; }
+  header .inner{max-width:920px;margin:0 auto;}
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace; font-size:11.5px; letter-spacing:.14em;
+    text-transform:uppercase; opacity:.82; display:flex;align-items:center;gap:8px;margin-bottom:8px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--coral);display:inline-block;}
+  h1{
+    font-family:"Big Shoulders Display",sans-serif; font-weight:800;
+    font-size:clamp(30px,7.5vw,46px); line-height:.95; margin:0 0 6px;
+    letter-spacing:.01em; text-wrap:balance;
+  }
+  .tagline{font-size:14px;opacity:.88;max-width:52ch;margin:0 0 16px;}
+  .hero-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .phone-pill, .admin-pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.28); color:inherit;
+    padding:9px 14px;border-radius:999px; font-family:"JetBrains Mono",monospace;
+    font-size:13.5px;font-weight:700;letter-spacing:.02em; text-decoration:none; cursor:pointer;
+  }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .phone-pill, :root:not([data-theme="light"]) .admin-pill{ background:rgba(4,20,26,0.08); border-color:rgba(4,20,26,0.2);} }
+  :root[data-theme="dark"] .phone-pill, :root[data-theme="dark"] .admin-pill{ background:rgba(4,20,26,0.08); border-color:rgba(4,20,26,0.2);}
+  .admin-pill[data-on="true"]{ background:var(--coral); border-color:var(--coral); color:#fff; }
+
+  /* ---------- Admin bar ---------- */
+  .admin-bar{
+    background:var(--admin-soft); border-bottom:1.5px solid var(--admin);
+    padding:10px 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    font-size:13px;
+  }
+  .admin-bar .tag{
+    font-family:"JetBrains Mono",monospace; font-weight:700; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--admin); display:flex; align-items:center; gap:6px;
+  }
+  .btn{
+    border:1.5px solid var(--line); background:var(--paper); color:var(--ink);
+    border-radius:9px; padding:8px 13px; font-size:13px; font-weight:600; cursor:pointer;
+  }
+  .btn:hover{border-color:var(--teal-2);}
+  .btn.primary{ background:var(--navy); border-color:var(--navy); color:#f4faf9; }
+  :root[data-theme="dark"] .btn.primary, @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .btn.primary{ color:#04141a; } }
+  .btn.coral{ background:var(--coral); border-color:var(--coral); color:#fff; }
+  .btn.ghost{ background:transparent; }
+  .btn.small{ padding:5px 9px; font-size:12px; border-radius:7px; }
+  .btn.danger{ color:var(--bad); border-color:var(--bad); background:transparent; }
+  .btn:disabled{opacity:.5; cursor:default;}
+
+  .settings-panel{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; margin:14px 0; display:grid; gap:10px; grid-template-columns:1fr 1fr;
+  }
+  .settings-panel .full{grid-column:1/-1;}
+  .field label{display:block; font-size:11.5px; font-weight:700; color:var(--ink-soft); margin-bottom:4px; text-transform:uppercase; letter-spacing:.05em;}
+  .field input, .field textarea, .field select{
+    width:100%; border:1.5px solid var(--line); border-radius:8px; padding:8px 10px;
+    font-size:14px; font-family:inherit; background:var(--paper); color:var(--ink);
+  }
+  .field textarea{resize:vertical; min-height:56px;}
+
+  /* ---------- Controls ---------- */
+  .controls{
+    position:sticky; top:0; z-index:20; background:var(--foam);
+    padding-top:14px; padding-bottom:10px; border-bottom:1px solid var(--line);
+  }
+  .search-row{display:flex; gap:8px; margin-bottom:10px;}
+  .search-box{flex:1; position:relative;}
+  .search-box svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.5; pointer-events:none;}
+  #search{
+    width:100%; padding:11px 14px 11px 38px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--paper); color:var(--ink); font-size:15px; font-family:inherit;
+  }
+  #search:focus{outline:2px solid var(--teal-2); outline-offset:1px;}
+  select#sort{
+    border-radius:10px; border:1.5px solid var(--line); background:var(--paper); color:var(--ink);
+    font-family:"Work Sans",sans-serif; font-size:13.5px; font-weight:600; padding:0 10px;
+  }
+  .chip-row{display:flex; gap:7px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;}
+  .chip-row::-webkit-scrollbar{display:none;}
+  .chip{
+    flex:0 0 auto; font-size:13px; font-weight:600; padding:7px 13px; border-radius:999px;
+    border:1.5px solid var(--line); background:var(--paper); color:var(--ink-soft); cursor:pointer;
+    white-space:nowrap; display:flex; align-items:center; gap:6px;
+  }
+  .chip .swatch{width:8px;height:8px;border-radius:50%;}
+  .chip[aria-pressed="true"]{ background:var(--navy); border-color:var(--navy); color:#f4faf9; }
+  :root[data-theme="dark"] .chip[aria-pressed="true"], @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .chip[aria-pressed="true"]{ color:#04141a; }}
+
+  .meta-row{display:flex; justify-content:space-between; align-items:baseline; padding:10px 2px 4px; font-size:12.5px; color:var(--ink-soft);}
+  .meta-row b{color:var(--ink); font-weight:700;}
+
+  /* ---------- Groups & rows ---------- */
+  .group{margin-top:18px;}
+  .group-title{
+    font-family:"JetBrains Mono",monospace; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--teal-2); font-weight:700; display:flex; align-items:center; gap:8px; margin:0 0 8px 2px;
+  }
+  .group-title .swatch{width:9px;height:9px;border-radius:2px;}
+  .group-title .count{color:var(--ink-soft); font-weight:500; letter-spacing:0; text-transform:none;}
+
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+  .item{
+    display:grid; grid-template-columns:1fr auto; gap:6px 14px; padding:13px 14px;
+    border-bottom:1px solid var(--line); align-items:center;
+  }
+  .item:last-child{border-bottom:none;}
+  .item .name{ font-size:14.5px; font-weight:600; line-height:1.32; grid-column:1; }
+  .item .sub{ grid-column:1; display:flex; flex-wrap:wrap; gap:6px 10px; font-size:12px; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; }
+  .item .sub span{white-space:nowrap;}
+  .item .price{ grid-column:2; grid-row:1 / span 2; text-align:right; font-family:"JetBrains Mono",monospace; display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+  .item .price .amt{ font-size:19px; font-weight:700; color:var(--coral); font-variant-numeric:tabular-nums; }
+  .item .price .per{ display:block; font-size:10.5px; color:var(--ink-soft); margin-top:1px; font-weight:500; }
+
+  .stepper{ display:flex; align-items:center; gap:6px; }
+  .stepper button{
+    width:26px; height:26px; border-radius:7px; border:1.5px solid var(--line); background:var(--paper);
+    color:var(--ink); font-size:15px; font-weight:700; cursor:pointer; line-height:1;
+  }
+  .stepper .n{ min-width:20px; text-align:center; font-family:"JetBrains Mono",monospace; font-weight:700; font-size:13.5px; }
+  .add-btn{
+    border:1.5px solid var(--coral); color:var(--coral); background:var(--coral-soft);
+    border-radius:8px; padding:6px 11px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+
+  /* edit-mode row */
+  .item.editing{ grid-template-columns:1fr; }
+  .edit-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:8px; }
+  .edit-grid .full{grid-column:1/-1;}
+  .edit-grid label{ font-size:10.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:3px;}
+  .edit-grid input, .edit-grid select{ width:100%; border:1.5px solid var(--line); border-radius:7px; padding:6px 8px; font-size:13.5px; font-family:inherit; background:var(--foam); color:var(--ink); }
+  .margin-note{ font-size:12px; color:var(--ink-soft); margin-top:6px; font-family:"JetBrains Mono",monospace; }
+  .margin-note b{color:var(--good);}
+  .margin-note.neg b{color:var(--bad);}
+  .item-edit-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+
+  .empty{ text-align:center; padding:50px 20px; color:var(--ink-soft); }
+  .empty .big{font-size:32px; margin-bottom:8px;}
+
+  footer.note{
+    margin-top:30px; padding:16px 16px 12px; border-top:1px dashed var(--line);
+    font-size:12.5px; color:var(--ink-soft); line-height:1.55;
+  }
+  footer.note b{color:var(--ink);}
+  .updated-line{font-size:11px; color:var(--ink-soft); opacity:.8; margin-top:10px; font-family:"JetBrains Mono",monospace;}
+
+  /* ---------- Quote bar & drawer ---------- */
+  .quote-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    display:flex; justify-content:center;
+    padding:0 16px calc(14px + env(safe-area-inset-bottom,0px));
+    pointer-events:none;
+  }
+  .quote-bar button{
+    pointer-events:auto;
+    background:var(--navy); color:#f4faf9; border:none; border-radius:999px;
+    padding:13px 22px; font-size:14.5px; font-weight:700; box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:10px; cursor:pointer;
+  }
+  :root[data-theme="dark"] .quote-bar button, @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .quote-bar button{ color:#04141a; } }
+  .quote-bar .total{ font-family:"JetBrains Mono",monospace; background:rgba(255,255,255,.18); padding:3px 9px; border-radius:999px; }
+
+  .drawer-overlay{
+    position:fixed; inset:0; background:rgba(6,20,26,0.45); z-index:50;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .drawer{
+    background:var(--paper); width:100%; max-width:560px; max-height:86vh; overflow-y:auto;
+    border-radius:18px 18px 0 0; padding:18px 16px calc(20px + env(safe-area-inset-bottom,0px));
+    box-shadow:0 -8px 30px rgba(0,0,0,.25);
+  }
+  .drawer h2{ font-family:"Big Shoulders Display",sans-serif; font-size:26px; margin:0 0 4px; }
+  .drawer .close{ float:right; background:none; border:none; font-size:22px; cursor:pointer; color:var(--ink-soft); line-height:1;}
+  .cart-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); }
+  .cart-row .info{flex:1; min-width:0;}
+  .cart-row .info .n{font-size:13.5px; font-weight:600;}
+  .cart-row .info .p{font-size:12px; color:var(--ink-soft); font-family:"JetBrains Mono",monospace;}
+  .cart-row .line-total{ font-family:"JetBrains Mono",monospace; font-weight:700; min-width:64px; text-align:right;}
+  .cart-total-row{ display:flex; justify-content:space-between; padding:12px 0; font-weight:700; font-size:16px; }
+  .cart-actions{ display:flex; gap:10px; margin-top:10px; flex-wrap:wrap; }
+  .cart-actions .btn{flex:1; min-width:140px; text-align:center;}
+  .cart-fields{display:grid; gap:8px; margin:12px 0;}
+  .preview-box{
+    background:var(--foam); border:1px dashed var(--line); border-radius:10px; padding:10px;
+    font-family:"JetBrains Mono",monospace; font-size:12px; white-space:pre-wrap; color:var(--ink-soft); max-height:140px; overflow-y:auto;
+  }
+  .toast{
+    position:fixed; bottom:90px; left:50%; transform:translateX(-50%); z-index:60;
+    background:var(--navy); color:#f4faf9; padding:10px 18px; border-radius:999px;
+    font-size:13.5px; font-weight:600; box-shadow:var(--shadow);
+  }
+  :root[data-theme="dark"] .toast, @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .toast{ color:#04141a; } }
+
+  @media (max-width:420px){
+    h1{font-size:30px;}
+    .item .price .amt{font-size:17px;}
+    .settings-panel{grid-template-columns:1fr;}
+    .edit-grid{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script id="data" type="application/json">{"business":{"name":"H&L Wholesale Seafood","phone":"305-842-0535","email":"","note":"We offer a wide variety of fresh and live seafood, including Dungeness crab, blue crab, lobster, fresh yellowfin tuna, clams (any size), and oysters (all kinds). Emergency weekend deliveries available. Prices are updated weekly and vary by product.","updated":"2026-09-16"},"items":[{"name":"40/50HEAD ON SHRIMP 6X24","pack":"6X24","price":3.2,"unit":"LBS","case":"CASE","qty":24.0,"category":"Shrimp","id":"i001"},{"name":"20/30 HOSO SHRIMP (24LB)","pack":"20/30","price":4.1,"unit":"LBS","case":"CASE","qty":200.0,"category":"Shrimp","id":"i002"},{"name":"40/50 HOSO SHRIMP (40lb)","pack":"20/30","price":2.95,"unit":"LBS","case":"CASE","qty":123.0,"category":"Shrimp","id":"i003"},{"name":"30/40 HOSO SHRIMP (24LB)","pack":"30/40","price":3.45,"unit":"LBS","case":"CASE","qty":93.0,"category":"Shrimp","id":"i004"},{"name":"30/40 HOSO SHRIMP (40LB)","pack":"30/40","price":3.1,"unit":"LBS","case":"CASE","qty":85.0,"category":"Shrimp","id":"i005"},{"name":"36/40 HLSO SHRIMP S.A. (40LB)","pack":"36/40","price":4.1,"unit":"LBS","case":"CASE","qty":113.0,"category":"Shrimp","id":"i006"},{"name":"41/50 PND IQF INDIA (20LB)","pack":"41/50","price":4.6,"unit":"LBS","case":"CASE","qty":311.0,"category":"Shrimp","id":"i007"},{"name":"31/40 PND IQF S.A. (20LB)","pack":"31/40","price":5.15,"unit":"LBS","case":"CASE","qty":210.0,"category":"Shrimp","id":"i008"},{"name":"71/90 PND IQF S.A. INDIA (20LB)","pack":"71/90","price":4.6,"unit":"LBS","case":"CASE","qty":30.0,"category":"Shrimp","id":"i009"},{"name":"21/25 PND T/ON IQF (10LB)","pack":"21/25","price":5.45,"unit":"LB","case":"CASE","qty":98.0,"category":"Shrimp","id":"i010"},{"name":"26/30 EZ PEEL PACK IQF 20#","pack":"26/30","price":5.1,"unit":"LB","case":"CASE","qty":150.0,"category":"Shrimp","id":"i011"},{"name":"26/30 PND IQF S.A. 20#","pack":"26/30","price":5.45,"unit":"LB","case":"CASE","qty":300.0,"category":"Shrimp","id":"i012"},{"name":"21/25 EZ PEEL PACK IQF 20#","pack":"21/25","price":5.3,"unit":"LB","case":"CASE","qty":205.0,"category":"Shrimp","id":"i013"},{"name":"16/20 PND T/ON IQF (10LB)","pack":"16/20","price":6.6,"unit":"LB","case":"CASE","qty":24.0,"category":"Shrimp","id":"i014"},{"name":"50/60 HEAD ON SHRIMP 10/4#","pack":"50/60","price":2.95,"unit":"LB","case":"CASE","qty":24.0,"category":"Shrimp","id":"i015"},{"name":"60/70 HEAD ON SHRIM 10/4#","pack":"60/70","price":3.15,"unit":"LB","case":"CASE","qty":24.0,"category":"Shrimp","id":"i016"},{"name":"70/80 HEAD ON SHRIMP 10/4#","pack":"10X4#","price":2.85,"unit":"LB","case":"CASE","qty":24.0,"category":"Shrimp","id":"i017"},{"name":"SHP 15/20 WH H-ON WILD 'SEA MART'","pack":"6X4#","price":8.45,"unit":"LB","case":"CASE","qty":24.0,"category":"Shrimp","id":"i018"},{"name":"FRESH WATER SHRIMP 'HOSO' 1/2","pack":"12X2#","price":8.45,"unit":"LB","case":"2025-12-02","qty":20.0,"category":"Shrimp","id":"i019"},{"name":"FRESH WATER SHRIMP 'HOSO' 2/4","pack":"12X2#","price":9.85,"unit":"LB","case":"2025-12-02","qty":20.0,"category":"Shrimp","id":"i020"},{"name":"FRESH WATER SHRIMP 'HOSO' 4/6","pack":"10X2","price":8.95,"unit":"LB","case":"2023-10-02","qty":30.0,"category":"Shrimp","id":"i021"},{"name":"SEAWEED SALAD WAKAME JP(2PK)","pack":"2X4.4#","price":5.95,"unit":"LB","case":"VEGE","qty":40.0,"category":"Sauces, Prepared & Other","id":"i022"},{"name":"Tiger Shrimp 8/12 Hlso","pack":"4X6#","price":10.95,"unit":"LB","case":"2025-06-04","qty":40.0,"category":"Shrimp","id":"i023"},{"name":"SHRIMP 8/12 WH P&D CKD T-ON CENSEA","pack":"5X2#","price":12.3,"unit":"LB","case":"2025-05-02","qty":40.0,"category":"Shrimp","id":"i024"},{"name":"U/15 Shrimp Hlso S.A.","pack":"4X10#","price":6.95,"unit":"LB","case":"10/4lb","qty":40.0,"category":"Shrimp","id":"i025"},{"name":"Shrimp 5/10 WH H/ON Wild","pack":"10X2.21#","price":9.95,"unit":"LB","case":"CS","qty":40.0,"category":"Shrimp","id":"i026"},{"name":"Shrimp U/12 WH Hlso Gava","pack":"10X5#","price":10.45,"unit":"LB","case":"CS","qty":40.0,"category":"Shrimp","id":"i027"},{"name":"10/15 HEAD ON WILD (22LB)","pack":"10X2.2#","price":9.9,"unit":"LB","case":"CS","qty":40.0,"category":"Shrimp","id":"i028"},{"name":"10/20 WH H/ON WILD","pack":"10X2.2#","price":9.65,"unit":"LB","case":"CS","qty":40.0,"category":"Shrimp","id":"i029"},{"name":"SHP U/10 WH HLSO WILD","pack":"10X2.21#","price":10.6,"unit":"LB","case":"CS","qty":40.0,"category":"Shrimp","id":"i030"},{"name":"13/15 WH HLSO S.AMERI O CHEF","pack":"4X10#","price":6.45,"unit":"LB","case":"CS","qty":28.0,"category":"Shrimp","id":"i031"},{"name":"15/20 WH H ON WILD SEA MART","pack":"4X6#","price":8.85,"unit":"LB","case":"CS","qty":24.0,"category":"Other Seafood","id":"i032"},{"name":"FZ CRAB LUMP","pack":"6X4#","price":10.4,"unit":"LB","case":"6/4lb","qty":30.0,"category":"Crab","id":"i033"},{"name":"SHRIMP 16/20 WH HLSO ECU 'TROPICAL'","pack":"6X4#","price":5.15,"unit":"LB","case":"6/4lb","qty":40.0,"category":"Shrimp","id":"i034"},{"name":"SHRIMP 26/30 WH HLSO ECU 'TROPICAL'","pack":"6X4#","price":4.35,"unit":"LB","case":"6/4lb","qty":35.0,"category":"Shrimp","id":"i035"},{"name":"SHP 31/35 WH HLSO 'CHAPMAR","pack":"6X4#","price":3.95,"unit":"LB","case":"6/4lb","qty":28.0,"category":"Shrimp","id":"i036"},{"name":"SHRIMP 41/50 WH HLSO ECU' TROPICAL","pack":"10X4#","price":4.2,"unit":"LB","case":"10/4LB","qty":40.0,"category":"Shrimp","id":"i037"},{"name":"21/25 RED P&D IQF ARGENTINA","pack":"6X4#","price":7.45,"unit":"LB","case":"6/4LB","qty":40.0,"category":"Shrimp","id":"i038"},{"name":"SHRIMP 200/300 WH P&D COOKED","pack":"5X2#","price":5.45,"unit":"LB","case":"5/2lb","qty":15.0,"category":"Shrimp","id":"i039"},{"name":"COOKED SHRIMP IQF 61/70","pack":"10X1#","price":4.95,"unit":"LB","case":"10/1lb","qty":40.0,"category":"Shrimp","id":"i040"},{"name":"SHP 13/15 BT P&D T-ON IQF 'F ONE'","pack":"10X1#","price":10.7,"unit":"LB","case":"10/1lb","qty":45.0,"category":"Shrimp","id":"i041"},{"name":"ABALONE / LOCOS 10/12 ct IQF (BOX)","pack":"1X10#","price":11.95,"unit":"LB","case":"10/1lb","qty":20.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i042"},{"name":"ABALONE / LOCOS 12/14 ct IQF (BOX)","pack":"1X10#","price":12.45,"unit":"LB","case":"10/1lb","qty":34.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i043"},{"name":"SMOKED SALMON 5/UP FIL S-ON","pack":"1X50#","price":13.75,"unit":"LB","case":"1/50LB","qty":10.0,"category":"Salmon & Tuna","id":"i044"},{"name":"ROBALO 2-4 ROUND GG IQF","pack":"1X30#","price":5.45,"unit":"LB","case":"30LB","qty":10.0,"category":"Fish (Whole & Fillet)","id":"i045"},{"name":"SILVER POMFRET U/100 IVP","pack":"1X20#","price":3.95,"unit":"LB","case":"LB","qty":12.0,"category":"Fish (Whole & Fillet)","id":"i046"},{"name":"SILVER POMFRET 200/300 IQF","pack":"1X22.05#","price":7.6,"unit":"LB","case":"LB","qty":18.0,"category":"Fish (Whole & Fillet)","id":"i047"},{"name":"SMOKED /SALTED HERRING FILLET","pack":"1X10#","price":5.95,"unit":"LB","case":"LB","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i048"},{"name":"HERRING THREAD WHOLE","pack":"1X30#","price":5.7,"unit":"LB","case":"LB","qty":12.0,"category":"Fish (Whole & Fillet)","id":"i049"},{"name":"ALBACORE LOIN 3/5 IQF","pack":"1X30#","price":5.85,"unit":"LB","case":"LB","qty":23.0,"category":"Salmon & Tuna","id":"i050"},{"name":"TUNA STEAK 4 OZ 'T TOWER'","pack":"1X10","price":5.6,"unit":"LB","case":"LB","qty":65.0,"category":"Salmon & Tuna","id":"i051"},{"name":"TUNA STEAK 6 OZ 'T TOWER'","pack":"1X10#","price":6.3,"unit":"LB","case":"CS","qty":24.0,"category":"Salmon & Tuna","id":"i052"},{"name":"MILK FISH 600/800 ROUND 32# NW.","pack":"1X40#","price":3.15,"unit":"LB","case":"CS","qty":24.0,"category":"Fish (Whole & Fillet)","id":"i053"},{"name":"MILK FISH 800/UP ROUND 32# NW","pack":"1X40#","price":2.95,"unit":"LB","case":"CS","qty":24.0,"category":"Fish (Whole & Fillet)","id":"i054"},{"name":"MARYLAND STYLE CRAB CAKES 3.6 OZ","pack":"2X5#","price":5.15,"unit":"LB","case":"CS","qty":24.0,"category":"Crab","id":"i055"},{"name":"MARYLAND STYLE CRAB CAKES 2 OZ","pack":"10X1#","price":5.45,"unit":"LB","case":"CS","qty":24.0,"category":"Crab","id":"i056"},{"name":"ROCK CRAB CLAW 3/5 CHILEAN","pack":"14X2#","price":5.95,"unit":"LB","case":"CS","qty":24.0,"category":"Crab","id":"i057"},{"name":"ROCK CRAB CLAW 5/7 CHILEAN","pack":"4X5#","price":6.15,"unit":"LB","case":"CS","qty":24.0,"category":"Crab","id":"i058"},{"name":"100/200 WH P&D COOKED B WING","pack":"5X2#","price":4.95,"unit":"LB","case":"CS","qty":24.0,"category":"Shrimp","id":"i059"},{"name":"200/300 WH P&D COOKED B. WING","pack":"5X2#","price":5.1,"unit":"LB","case":"CS","qty":24.0,"category":"Shrimp","id":"i060"},{"name":"FROG LEG 2/4 21# NW CLEAR TAPE","pack":"30#GW","price":5.15,"unit":"LB","case":"CS","qty":20.0,"category":"Frog Legs & Exotic","id":"i061"},{"name":"FROG LEG 4/6 21# NW CLEAR TAPE","pack":"30#GW","price":5.95,"unit":"LB","case":"CS","qty":20.0,"category":"Frog Legs & Exotic","id":"i062"},{"name":"FROG LEG 6/8 21# NW CLEAR TAPE","pack":"30#GW","price":5.45,"unit":"LB","case":"10/2lb","qty":20.0,"category":"Frog Legs & Exotic","id":"i063"},{"name":"PASTURED CRAB MT SUPER LUMP","pack":"12X1","price":4.15,"unit":"LB","case":"10/2lb","qty":20.0,"category":"Crab","id":"i064"},{"name":"COOKED OCTOPUS 4/6 LEGS \"TTOWER","pack":"1X22#","price":14.45,"unit":"LB","case":"CS","qty":24.0,"category":"Octopus & Squid","id":"i065"},{"name":"CUTTLEFISH BALL FIGO","pack":"30X200g","price":2.65,"unit":"bag","case":"CS","qty":24.0,"category":"Octopus & Squid","id":"i066"},{"name":"FISH ROE & IMI CRAB MEAT DUMPLINGS","pack":"20X300g","price":3.95,"unit":"bag","case":"CS","qty":24.0,"category":"Crab","id":"i067"},{"name":"TEMPURA SHRIMP 16/20 MANEKI ret","pack":"16/20","price":56.45,"unit":"CS","case":"12x10pc","qty":58.0,"category":"Shrimp","id":"i068"},{"name":"TEMPURA SHRIMP 13/15 MANEKI 100PCS","pack":"13/15","price":62.0,"unit":"CS","case":"10/5lb","qty":null,"category":"Shrimp","id":"i069"},{"name":"CRAWFISH MEAT 150UP (16X12OZ)","pack":"16X12OZ","price":6.95,"unit":"8.0","case":"16X12","qty":null,"category":"Crawfish","id":"i070"},{"name":"SOFT SHELL CRAB MEDIUM","pack":"6X1#","price":29.95,"unit":"CS","case":"CS","qty":34.0,"category":"Crab","id":"i071"},{"name":"SOFT SHELL CRAB PRIME","pack":"6X1#","price":32.5,"unit":"BOX","case":"CS","qty":30.0,"category":"Crab","id":"i072"},{"name":"BEEF BALL WEI CHUAN","pack":"30X8.OZ","price":3.95,"unit":"CS","case":"CS","qty":40.0,"category":"Sauces, Prepared & Other","id":"i073"},{"name":"CORN ON COB BULK","pack":"1X96PC","price":27.45,"unit":"CS","case":"VEGE","qty":null,"category":"Sauces, Prepared & Other","id":"i074"},{"name":"NORWAY MACKEREL 400/600 RND","pack":"1X22.05#","price":3.45,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i075"},{"name":"NORWAY MACKEREL 400/600 RND","pack":"1X44.10#","price":3.65,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i076"},{"name":"NORWAY MACKEREL 600/UP RND","pack":"1X22.5#","price":3.95,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i077"},{"name":"MONK FISH WHOLE 1-2 KG IQF","pack":"1X22..05#","price":3.6,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i078"},{"name":"MONK FISH TAILS 2/4 SKIN-LESS IWP","pack":"1X22.05#","price":6.15,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i079"},{"name":"RAZOR CLAM WHOLE COOKED","pack":"3X4#","price":6.45,"unit":"CS","case":"3X4","qty":null,"category":"Mussels, Clams, Oysters & Scallops","id":"i080"},{"name":"RED MULLET 100/200 WHOLE ROUND","pack":"10X2#","price":3.8,"unit":"CS","case":"CS","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i081"},{"name":"RED MULLET 200/300 WHOLE RND IVP","pack":"1X20#","price":3.45,"unit":"CS","case":"CS","qty":18.0,"category":"Fish (Whole & Fillet)","id":"i082"},{"name":"WHELK MEAT 15/25 GRAM COOKED","pack":"1X22.05#","price":7.85,"unit":"38.0","case":"CS","qty":8.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i083"},{"name":"WHELK 20/30 PCS IN SHELL COOKED","pack":"1X11.03#","price":3.95,"unit":"CS","case":"3.34","qty":null,"category":"Mussels, Clams, Oysters & Scallops","id":"i084"},{"name":"OCEAN PERCH FILLET 2/4 CT CANADA","pack":"4X10#","price":5.95,"unit":"LB","case":"CS","qty":10.0,"category":"Fish (Whole & Fillet)","id":"i085"},{"name":"TUNA SAKU AAA 5/7 (YF) TOWER","pack":"1X10#","price":10.95,"unit":"LB","case":"CS","qty":10.0,"category":"Salmon & Tuna","id":"i086"},{"name":"TUNA SAKU AAA 7/9 (YF) TOWER","pack":"1X10#","price":10.85,"unit":"LB","case":"5/2lb","qty":10.0,"category":"Salmon & Tuna","id":"i087"},{"name":"TUNA LOIN 3/5 CENTER CUT T. TOWER","pack":"1X30#","price":6.45,"unit":"LB","case":"CS","qty":10.0,"category":"Salmon & Tuna","id":"i088"},{"name":"TUNA LOIN 5/8 CENTER (YF) T. TOWER","pack":"1X30#","price":6.6,"unit":"LB","case":"CS","qty":10.0,"category":"Salmon & Tuna","id":"i089"},{"name":"LANE SNAPPER 2-3 CLEANED GGS","pack":"1X22#","price":6.6,"unit":"LB","case":"CS","qty":10.0,"category":"Fish (Whole & Fillet)","id":"i090"},{"name":"LANE SNAPPER 3/4 CLEANED GGS","pack":"1X10#","price":6.15,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i091"},{"name":"SALMON 8OZ PRTN S-LESS NORWAY","pack":"1X10#","price":9.45,"unit":"LB","case":"CS","qty":30.0,"category":"Salmon & Tuna","id":"i092"},{"name":"SALMON 6OZ PRTN S-LESS NORWAY","pack":"1X10#","price":9.2,"unit":"LB","case":"CS","qty":30.0,"category":"Salmon & Tuna","id":"i093"},{"name":"ESCOLAR FISH SAKU AAA COREA","pack":"1X22#","price":9.95,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i094"},{"name":"SQUID 4/5 OZ CALAMARI STEAK TWN","pack":"6X5#","price":6.1,"unit":"LB","case":"6/5lb","qty":30.0,"category":"Octopus & Squid","id":"i095"},{"name":"LOBSTER TAIL MEAT 6# (BAG)","pack":"6X2#","price":28.95,"unit":"LB","case":"CS","qty":10.0,"category":"Lobster","id":"i096"},{"name":"KING CRAB L&C 4/7 RED IMPERIAL","pack":"1X20#","price":49.5,"unit":"LB","case":"CS","qty":15.0,"category":"Crab","id":"i097"},{"name":"KING CRAB L&C 12/14 RED ORCA BAY","pack":"1X20#","price":58.95,"unit":"LB","case":"CS","qty":20.0,"category":"Crab","id":"i098"},{"name":"PROCESSED SCALLOP IQF","pack":"40/60","price":6.65,"unit":"LB","case":"6/5lb","qty":25.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i099"},{"name":"PROCESSED SCALLOP IQF","pack":"60/80","price":5.6,"unit":"LB","case":"6/5lb","qty":30.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i100"},{"name":"PROCESSED SCALLOP IQF","pack":"80/100","price":4.45,"unit":"LB","case":"6/5lb","qty":30.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i101"},{"name":"PROCESSED SCALLOP U/10 DIAMOND","pack":"10X4.4#","price":16.95,"unit":"LB","case":"CS","qty":30.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i102"},{"name":"PROCESSED SCALLOP REQUEST","pack":"2023-10-20","price":14.95,"unit":"LB","case":"6X5/LB","qty":50.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i103"},{"name":"RED GROUPER WHOLE 1/2 IQF","pack":"1X20#","price":5.95,"unit":"LB","case":"CS","qty":50.0,"category":"Fish (Whole & Fillet)","id":"i104"},{"name":"CODFISH 5 OZ LOINS IQF 'CHANNEL'","pack":"1X10#","price":6.95,"unit":"LB","case":"CS","qty":44.0,"category":"Fish (Whole & Fillet)","id":"i105"},{"name":"CODFISH 8 OZ LOINS IQF 'BW'","pack":"1X10#","price":6.7,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i106"},{"name":"HAMACHI COLLAR AM YELLOW TAIL IVP","pack":"CT WT","price":10.75,"unit":"LB","case":"CS","qty":24.0,"category":"Fish (Whole & Fillet)","id":"i107"},{"name":"SALTED POLLOCK FILLET","pack":"20X1","price":4.8,"unit":"LB","case":"CS","qty":24.0,"category":"Fish (Whole & Fillet)","id":"i108"},{"name":"SALTED POLLOCK SPLIT BONE IN 50#","pack":"1X50#","price":6.45,"unit":"LB","case":"CS","qty":18.0,"category":"Fish (Whole & Fillet)","id":"i109"},{"name":"BLUE CRAB MEDIUM 5/7 CLND 'Q.CATCH","pack":"1X20#","price":5.5,"unit":"LB","case":"CS","qty":20.0,"category":"Crab","id":"i110"},{"name":"BLUE CRAB JUMBO 1/3 CLND 'MX'","pack":"1X20#","price":5.45,"unit":"LB","case":"CS","qty":20.0,"category":"Crab","id":"i111"},{"name":"BLUE CRAB LARGE 3/5 CLND 'L' MX","pack":"1X20#","price":5.2,"unit":"LB","case":"CS","qty":20.0,"category":"Crab","id":"i112"},{"name":"FLOWER CLAM 11/20 WHL CKD 13#","pack":"20X#GW","price":6.7,"unit":"LB","case":"CS","qty":30.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i113"},{"name":"LIVE LOBSTER 2/3","pack":"1X30#","price":12.45,"unit":"LB","case":"CS","qty":20.0,"category":"Lobster","id":"i114"},{"name":"DUNGENESS CRAB SECTION 'ICICLE'","pack":"1X25","price":12.65,"unit":"LB","case":"CS","qty":22.0,"category":"Crab","id":"i115"},{"name":"DUNGENESS CRAB CLUSTER","pack":"1X40#","price":13.45,"unit":"LB","case":"CS","qty":30.0,"category":"Crab","id":"i116"},{"name":"IMITATION CRAB MEAT 2/.5","pack":"1X30#","price":2.7,"unit":"LB","case":"CS","qty":22.0,"category":"Crab","id":"i117"},{"name":"SNOW CRAB CLUSTER 3/5 (CANADA)","pack":"10X30#","price":9.95,"unit":"LB","case":"CS","qty":30.0,"category":"Crab","id":"i118"},{"name":"SNOW CRAB CLUSTER 5/8","pack":"10X30#","price":10.65,"unit":"LB","case":"CS","qty":30.0,"category":"Crab","id":"i119"},{"name":"SNOW CRAB CLUSTER 8UP","pack":"1X30#","price":11.95,"unit":"LB","case":"CS","qty":30.0,"category":"Crab","id":"i120"},{"name":"SNOW CRAB CLUSTER 10+","pack":"1X30#","price":12.95,"unit":"LB","case":"CS","qty":40.0,"category":"Crab","id":"i121"},{"name":"SNOW CRAB CLUSTER 12UP","pack":"1X10#","price":16.45,"unit":"LB","case":"CS","qty":30.0,"category":"Crab","id":"i122"},{"name":"TILAPIA 550/750 CLND IQF TAIWAN","pack":"1X40#","price":1.65,"unit":"LB","case":"CS","qty":33.0,"category":"Tilapia, Catfish & Swai","id":"i123"},{"name":"BABY OCTOPUS 16/25 #24","pack":"12X24#","price":3.7,"unit":"LB","case":"CS","qty":35.0,"category":"Octopus & Squid","id":"i124"},{"name":"OYSTER MEAT PACIFIC MD 16OZ FRESH","pack":"1X16 oz","price":11.95,"unit":"LB","case":"CS","qty":41.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i125"},{"name":"SQUID U/5 TUBES 13.2# 'CAPT. A'","pack":"22#GW","price":2.7,"unit":"LB","case":"CS","qty":30.0,"category":"Octopus & Squid","id":"i126"},{"name":"SQUID U/10 TUBES 13.2# 'PALOMINE'","pack":"22#GW","price":3.2,"unit":"LB","case":"CS","qty":25.0,"category":"Octopus & Squid","id":"i127"},{"name":"CONGER PIKE EEL WHOLE H-ON CLND","pack":"1X36#","price":5.45,"unit":"LB","case":"CS","qty":20.0,"category":"Shrimp","id":"i128"},{"name":"WASABI POWDER V-1A 'WANER'","pack":"10X2.2#","price":6.85,"unit":"LB","case":"CS","qty":15.0,"category":"Sauces, Prepared & Other","id":"i129"},{"name":"CROAKER ROUND (200-400) PC","pack":"6X4#","price":3.6,"unit":"LB","case":"CS","qty":24.0,"category":"Fish (Whole & Fillet)","id":"i130"},{"name":"EEL BBQ (UNAGI) 13 OZ SUSHI 'CAPT' A","pack":"2X11#","price":9.95,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i131"},{"name":"EEL BBQ (UNAGI) 14 OZ SUSHI 'CAPT' A","pack":"2X11#","price":10.45,"unit":"LB","case":"CS","qty":20.0,"category":"Fish (Whole & Fillet)","id":"i132"},{"name":"SEAFOOD MIX/SHRIMP 1X24#","pack":"1X24#","price":2.95,"unit":"LB","case":"CS","qty":20.0,"category":"Shrimp","id":"i133"},{"name":"FLOUNDER 5 OZ FIL S-LESS'N,SEA'","pack":"1X10#","price":4.95,"unit":"LB","case":"CS","qty":20.0,"category":"Fish (Whole & Fillet)","id":"i134"},{"name":"GROUPER FILLET 2/3 IQF","pack":"2X5#","price":8.8,"unit":"LB","case":"CS","qty":20.0,"category":"Fish (Whole & Fillet)","id":"i135"},{"name":"GROUPER FILLET 2/4 IQF","pack":"2X5#","price":8.7,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i136"},{"name":"KINGFISH MAKEREL 10/15 ROUND","pack":"1X60#","price":4.6,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i137"},{"name":"KINGFISH MAKEREL 15/UP ROUND","pack":"1X60#","price":4.8,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i138"},{"name":"PARROTFISH 1-2 GGS 'SENSEA'","pack":"1X10#","price":4.3,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i139"},{"name":"PARROTFISH 2-4 GGS 'SENSEA'","pack":"1X22#","price":3.8,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i140"},{"name":"CHANEL CATFISH FILLET 9/11 OZ","pack":"1X15","price":5.95,"unit":"LB","case":"CS","qty":20.0,"category":"Tilapia, Catfish & Swai","id":"i141"},{"name":"CHANEL CATFISH FILLET 5/7 OZ","pack":"1X15#","price":5.65,"unit":"LB","case":"CS","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i142"},{"name":"CHANEL CATFISH 7/9 OZ","pack":"1X15#","price":6.3,"unit":"LB","case":"CS","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i143"},{"name":"COLDWATER LOBSTER TAIL 7OZ","pack":"1X10#","price":25.6,"unit":"LB","case":"CS","qty":10.0,"category":"Lobster","id":"i144"},{"name":"COLDWATER LOBSTER TAIL 5OZ","pack":"1X10#","price":24.95,"unit":"LB","case":"CS","qty":10.0,"category":"Lobster","id":"i145"},{"name":"WHITE CLAM 17/22 WHL CKD","pack":"10X2#","price":2.95,"unit":"LB","case":"CS","qty":20.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i146"},{"name":"CUTTLEFISH 300/500 WHL RND","pack":"1X22#","price":3.8,"unit":"LB","case":"CS","qty":25.0,"category":"Octopus & Squid","id":"i147"},{"name":"YELLOW CLAM 100/200 WHL CKD","pack":"10X45g","price":4.95,"unit":"LB","case":"CS","qty":27.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i148"},{"name":"SEA SNAIL IN SHELL 50/80ct","pack":"5X4.4#","price":4.8,"unit":"LB","case":"CS","qty":25.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i149"},{"name":"CAPELIN F. ROE(ORANGE MASAGO AZUMA","pack":"4X4.4#","price":10.45,"unit":"LB","case":"CS","qty":36.0,"category":"Sauces, Prepared & Other","id":"i150"},{"name":"CAPELIN F. ROE (RED) 'COBE)","pack":"8X2.2#","price":12.95,"unit":"LB","case":"CS","qty":40.0,"category":"Sauces, Prepared & Other","id":"i151"},{"name":"IIIEX SQUID TAIWAN 600/UP","pack":"39.69#","price":3.6,"unit":"LB","case":"BAG","qty":40.0,"category":"Octopus & Squid","id":"i152"},{"name":"TILAPIA 350/550 CLND IQF TAIWAN","pack":"1X40#","price":1.6,"unit":"LB","case":"CS","qty":20.0,"category":"Tilapia, Catfish & Swai","id":"i153"},{"name":"LOBSTER TAIL MEAT","pack":"6X2#","price":49.95,"unit":"LB","case":"CS","qty":12.0,"category":"Lobster","id":"i154"},{"name":"CALABASH GARLIC BUTTER","pack":"1X12#","price":5.2,"unit":"12OZ","case":"CS","qty":20.0,"category":"Sauces, Prepared & Other","id":"i155"},{"name":"THE KINGS BUTTER SAUCE","pack":"1X9#","price":6.95,"unit":"16OZ","case":"CS","qty":20.0,"category":"Sauces, Prepared & Other","id":"i156"},{"name":"CRACKIN GARLIC BUTTER","pack":"1X16#","price":4.95,"unit":"16OZ","case":"CS","qty":18.0,"category":"Sauces, Prepared & Other","id":"i157"},{"name":"LOUSIANA SMOKED GATOR SAUSAGE","pack":"1X6#","price":6.3,"unit":"12OZ","case":"CS","qty":60.0,"category":"Sauces, Prepared & Other","id":"i158"},{"name":"NEW ZEALAND MUSSEL MEAT MED.","pack":"12X2#","price":6.45,"unit":"LB","case":"CS","qty":25.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i159"},{"name":"CHILEAN MUSSEL MEATS 100/200","pack":"10X1#","price":3.45,"unit":"LB","case":"CS","qty":22.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i160"},{"name":"SHRIMP EBI 3 L BIRD RIVER","pack":"15X20PCS","price":6.45,"unit":"LB","case":"CS","qty":10.0,"category":"Shrimp","id":"i161"},{"name":"FRIED TOFU AJITSUKI INARI TETSUJIN","pack":"10X60PCS","price":7.3,"unit":"LB","case":"CS","qty":10.0,"category":"Sauces, Prepared & Other","id":"i162"},{"name":"FRIED FISH CAKE VEGIE FIG0","pack":"30X200G","price":3.2,"unit":"LB","case":"CS","qty":10.0,"category":"Sauces, Prepared & Other","id":"i163"},{"name":"FISH TOFU RETAIL","pack":"60X8OZ#","price":2.95,"unit":"LB","case":"CS","qty":10.0,"category":"Sauces, Prepared & Other","id":"i164"},{"name":"CRAWFISH U/10 RND EGYPT","pack":"2X5#","price":3.95,"unit":"LB","case":"CS","qty":18.0,"category":"Crawfish","id":"i165"},{"name":"CRAWFISH MEAT 150/200 FISHERMAN","pack":"24X1#","price":8.95,"unit":"LB","case":"CS","qty":24.0,"category":"Crawfish","id":"i166"},{"name":"WHITTING FILLET SKINLESS 4/6","pack":"4X10#","price":3.35,"unit":"LB","case":"CS","qty":46.0,"category":"Fish (Whole & Fillet)","id":"i167"},{"name":"ABALONE WHOLE CKD 6 PC SEASOUL","pack":"1X24#","price":6.3,"unit":"PC","case":"CS","qty":40.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i168"},{"name":"SALMON PORTION 8OZ SKIN LESS CHILE","pack":"1X10#","price":7.95,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Salmon & Tuna","id":"i169"},{"name":"SHELL MUSSEL NEW ZLAND 1/2 .M.","pack":"12X2#","price":4.3,"unit":"LB","case":"CS","qty":24.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i170"},{"name":"NEW ZEALAND MUSSEL 1/2 .L.","pack":"12X2#","price":4.4,"unit":"LB","case":"CS","qty":224.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i171"},{"name":"BLACK MUSSEL CHILE WHOLE","pack":"1X10#","price":1.65,"unit":"LB","case":"CS","qty":24.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i172"},{"name":"TILAPIA FILLET IQF BULK 3/5","pack":"1X10#","price":2.45,"unit":"LB","case":"CS","qty":20.0,"category":"Tilapia, Catfish & Swai","id":"i173"},{"name":"TILAPIA FILLET IQF BULK 5/7","pack":"1X10#","price":2.6,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i174"},{"name":"TILAPIA FILLET IQF BULK 7/9","pack":"1X10#","price":2.7,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i175"},{"name":"TILAPIA FILLET IQF BULK 9/11","pack":"1X10#","price":2.85,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i176"},{"name":"SWAI FILLET IQF SHATTER 7/9","pack":"1X15#","price":2.3,"unit":"LB","case":"1/15LB","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i177"},{"name":"SWAI FILLET IQF 'PAL' 9/11","pack":"1X15#","price":2.45,"unit":"LB","case":"1/15lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i178"},{"name":"SWAI FILLET IQF 'VT' 5/7","pack":"1X15#","price":2.2,"unit":"LB","case":"1/15lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i179"},{"name":"SWAI FILLET 3/5 IQF 'CAP.A'","pack":"1X15#","price":2.1,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Tilapia, Catfish & Swai","id":"i180"},{"name":"MAHI MAHI 4OZ PORTION","pack":"1X10#","price":8.45,"unit":"LB","case":"1/10lb","qty":10.0,"category":"Fish (Whole & Fillet)","id":"i181"},{"name":"MAHI MAHI 6OZ PORTION CENSEA","pack":"1X10#","price":8.7,"unit":"LB","case":"1/10LB","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i182"},{"name":"MAHI MAHI 8OZ PORTION CENSEA","pack":"1X10#","price":9.6,"unit":"LB","case":"1/10LB","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i183"},{"name":"MAHI MAHI C/O 1/3 FILLET SKIN ON","pack":"1X30#","price":5.8,"unit":"LB","case":"1/30LB","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i184"},{"name":"MAHI MAHI C/O 3/5 FILLET SKIN ON","pack":"1X50#","price":5.9,"unit":"LB","case":"1/50LB","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i185"},{"name":"COLD WATER LOBSTER TAIL 9OZ","pack":"1X10#","price":25.95,"unit":"LB","case":"CS","qty":10.0,"category":"Lobster","id":"i186"},{"name":"COLD WATER LOBSTER TAIL 14/16","pack":"1X10#","price":25.95,"unit":"LB","case":"CS","qty":10.0,"category":"Lobster","id":"i187"},{"name":"LOBSTER TAIL MEAT","pack":"6X2#","price":49.95,"unit":"LB","case":"CS","qty":12.0,"category":"Lobster","id":"i188"},{"name":"SEA TROUT FILLET 2/4 SKIN ON 'O BONIE","pack":"4X10#","price":3.45,"unit":"LB","case":"CS","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i189"},{"name":"SEA TROUT FILLET 4/6 SKIN ON 'O BONIE","pack":"4X10#","price":3.6,"unit":"LB","case":"CS","qty":15.0,"category":"Fish (Whole & Fillet)","id":"i190"},{"name":"WHITTING DRESSED/HLESS 50#","pack":"10X5#","price":3.45,"unit":"LB","case":"CS","qty":50.0,"category":"Fish (Whole & Fillet)","id":"i191"},{"name":"TILAPIA 750/950 G&S BRAZIL","pack":"1X40#","price":1.8,"unit":"LB","case":"CS","qty":33.0,"category":"Tilapia, Catfish & Swai","id":"i192"},{"name":"WHOLE RED SNAPPER 1-2 GGS IVP","pack":"1X22#","price":7.95,"unit":"LB","case":"CS","qty":20.0,"category":"Fish (Whole & Fillet)","id":"i193"},{"name":"WHOLE RED SNAPPER 2-3 GGS IVP","pack":"1X22#","price":6.45,"unit":"LB","case":"CS","qty":20.0,"category":"Fish (Whole & Fillet)","id":"i194"},{"name":"WHOLE RED SNAPPER 1.5.2 GGS IVP","pack":"1X22#","price":8.2,"unit":"LB","case":"CS","qty":50.0,"category":"Fish (Whole & Fillet)","id":"i195"},{"name":"RED SNAPPER 1.5-2LBS","pack":"1X10#","price":7.95,"unit":"LB","case":"CS","qty":70.0,"category":"Fish (Whole & Fillet)","id":"i196"},{"name":"RED SNAPPER CLND 2/3","pack":"1X22#","price":6.65,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i197"},{"name":"WHOLE OCTOPUS IQF IND 2-4","pack":"1X30#","price":5.6,"unit":"LB","case":"CS","qty":50.0,"category":"Octopus & Squid","id":"i198"},{"name":"WHOLE OCTOPUS IQF IND 4-6","pack":"1X30#","price":6.45,"unit":"LB","case":"CS","qty":50.0,"category":"Octopus & Squid","id":"i199"},{"name":"WHOLE OCTOPUS IQF IND 1-2","pack":"1X30#","price":5.5,"unit":"LB","case":"CS","qty":22.0,"category":"Octopus & Squid","id":"i200"},{"name":"SPANISH OCTOPUS 6/8 CLND MIRAMAR","pack":"1X30#","price":7.95,"unit":"LB","case":"CS","qty":20.0,"category":"Octopus & Squid","id":"i201"},{"name":"SPANISH OCTOPUS 4/6 CLND EL REY","pack":"1X32#","price":7.45,"unit":"LB","case":"CS","qty":25.0,"category":"Octopus & Squid","id":"i202"},{"name":"WHOLE OCTOPUS 4/6 CLND PHIL LOBSTER","pack":"1X30#","price":4.45,"unit":"LB","case":"CS","qty":20.0,"category":"Lobster","id":"i203"},{"name":"FRESH WHOLE SALMON 12/14 (CANADA)","pack":"1X52.35#","price":6.3,"unit":"LB","case":"CS","qty":20.0,"category":"Salmon & Tuna","id":"i204"},{"name":"FRESH SALMON FILLET 2/3 SKIN ON","pack":"34.40#","price":7.65,"unit":"LB","case":"CS","qty":10.0,"category":"Salmon & Tuna","id":"i205"},{"name":"FRESH WHOLE SALMON 10/12 (CANADA)","pack":"1X51.40#","price":5.95,"unit":"LB","case":"CS","qty":15.0,"category":"Salmon & Tuna","id":"i206"},{"name":"WHOLE WASHED OYSTER 'VA'","pack":"1X30#","price":60.0,"unit":"80-100","case":"CS","qty":30.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i207"},{"name":"WHOLE WASHED OYSTER LOUSIANA","pack":"1X50#","price":78.0,"unit":"100-120","case":"CS","qty":50.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i208"},{"name":"OYSTER MEAT GULF 5# GAL 'R&A FRESH","pack":"1X5#","price":78.0,"unit":"GAL.","case":"GAL.","qty":20.0,"category":"Mussels, Clams, Oysters & Scallops","id":"i209"},{"name":"LIVE LOBSTER 1/2","pack":"1X30#","price":10.95,"unit":"LB","case":"CS","qty":24.0,"category":"Lobster","id":"i210"},{"name":"GOLDEN POMPANO 800+","pack":"1X40#","price":4.2,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i211"},{"name":"RED TILAPIA 650/750 CLEANED IQF","pack":"1X22#","price":3.15,"unit":"LB","case":"CS","qty":9.0,"category":"Tilapia, Catfish & Swai","id":"i212"},{"name":"RED TILAPIA 550/650 CLEANED IQF","pack":"1X22#","price":3.3,"unit":"LB","case":"CS","qty":40.0,"category":"Tilapia, Catfish & Swai","id":"i213"},{"name":"RED TILAPIA 450/550 CLEANED IQF","pack":"1X22#","price":3.45,"unit":"LB","case":"CS","qty":40.0,"category":"Tilapia, Catfish & Swai","id":"i214"},{"name":"BUTTERFISH 400/500 ROUND 'CAIS'","pack":"1X22#","price":4.4,"unit":"LB","case":"CS","qty":40.0,"category":"Sauces, Prepared & Other","id":"i215"},{"name":"BUTTERFISH 150/200 ROUND 'CAIS'","pack":"1X22#","price":3.45,"unit":"LB","case":"CS","qty":40.0,"category":"Sauces, Prepared & Other","id":"i216"},{"name":"BUTTERFISH 300/400 ROUND 'CAIS'W","pack":"1X22#","price":3.9,"unit":"LB","case":"CS","qty":40.0,"category":"Sauces, Prepared & Other","id":"i217"},{"name":"GOLDEN POMPANO 600/800 (GW)","pack":"1X40#","price":3.8,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i218"},{"name":"FRESH CATFISH FILLET 7/9 WILD CAUGHT","pack":"1X10#","price":7.95,"unit":"LB","case":"CS","qty":11.0,"category":"Tilapia, Catfish & Swai","id":"i219"},{"name":"POLLOCK FILLET SKINLESS 2/4","pack":"4X10#","price":260.0,"unit":"LB","case":"CS","qty":40.0,"category":"Fish (Whole & Fillet)","id":"i220"},{"name":"WHITTING FILLET SKINLESS 6/8","pack":"4X10#","price":3.45,"unit":"LB","case":"CS","qty":30.0,"category":"Fish (Whole & Fillet)","id":"i221"}]}</script>
+<script>
+(function(){
+  "use strict";
+
+  var CAT_COLORS = {
+    "Shrimp": "#e2632f",
+    "Crab": "#c1442e",
+    "Lobster": "#1c8a5a",
+    "Salmon & Tuna": "#d94f6b",
+    "Octopus & Squid": "#6a4fb6",
+    "Mussels, Clams, Oysters & Scallops": "#2f7fb0",
+    "Tilapia, Catfish & Swai": "#3f9142",
+    "Crawfish": "#b8862f",
+    "Sauces, Prepared & Other": "#8a8f3f",
+    "Frog Legs & Exotic": "#4f9e8f",
+    "Fish (Whole & Fillet)": "#1c7788",
+    "Other Seafood": "#7a7a7a"
+  };
+  var CAT_ORDER = Object.keys(CAT_COLORS);
+  function catColor(c){ return CAT_COLORS[c] || "#7a7a7a"; }
+
+  var CART_KEY = "hlseafood_cart_v1";
+  var CUSTOMER_KEY = "hlseafood_customer_v1";
+  var COST_KEY = "hlseafood_costs_v1";
+
+  var liveData = JSON.parse(document.getElementById("data").textContent);
+  var draft = null;
+  var costs = loadJSON(COST_KEY, {});
+  var cart = loadJSON(CART_KEY, {});
+  var customer = loadJSON(CUSTOMER_KEY, {name:"", phone:"", notes:""});
+
+  var ui = { q:"", cats:new Set(), sort:"cat", editMode:false, drawerOpen:false };
+
+  function loadJSON(key, fallback){
+    try{ var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  }
+  function saveJSON(key, val){
+    try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){}
+  }
+  function esc(s){
+    return String(s==null?"":s).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+  function fmtPrice(p){
+    if(p==null || isNaN(p)) return "call";
+    return "$" + Number(p).toFixed(2);
+  }
+  function num(v, d){
+    var n = parseFloat(v);
+    return isNaN(n) ? (d==null?null:d) : n;
+  }
+  function uid(){
+    return "i" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  }
+  function todayISO(){
+    var d = new Date();
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+
+  render();
+
+  var toastTimer = null;
+  function toast(msg){
+    var el = document.getElementById("toast");
+    if(el) el.remove();
+    el = document.createElement("div");
+    el.id = "toast"; el.className = "toast"; el.textContent = msg;
+    document.body.appendChild(el);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.remove(); }, 3200);
+  }
+
+  function cartCount(){ var n=0; for(var k in cart) n+=cart[k]; return n; }
+  function cartTotal(data){
+    var t=0;
+    for(var id in cart){ var it=findItem(data,id); if(it && it.price!=null) t+=it.price*cart[id]; }
+    return t;
+  }
+  function findItem(data, id){
+    for(var i=0;i<data.items.length;i++) if(data.items[i].id===id) return data.items[i];
+    return null;
+  }
+  function setCartQty(id, n){
+    n = Math.max(0, Math.round(n));
+    if(n<=0) delete cart[id]; else cart[id]=n;
+    saveJSON(CART_KEY, cart);
+  }
+
+  function render(){
+    var data = ui.editMode ? draft : liveData;
+    var app = document.getElementById("app");
+    var html = "";
+    html += renderHero(data);
+    html += renderAdminBar(data);
+    if(ui.editMode) html += renderSettingsPanel(data);
+    html += '<div class="wrap">';
+    html += renderControls(data);
+    html += '<div id="results">' + renderResults(data) + '</div>';
+    html += renderFooter(data);
+    html += '</div>';
+    if(!ui.editMode && cartCount()>0) html += renderQuoteBar(data);
+    app.innerHTML = html;
+    wireEvents(data);
+    if(ui.drawerOpen) openDrawerDOM(data);
+  }
+
+  function renderHero(data){
+    var b = data.business || {};
+    return '<header class="hero"><div class="inner">'+
+      '<div class="eyebrow"><span class="dot"></span>WHOLESALE PRICE LIST &middot; UPDATED WEEKLY</div>'+
+      '<h1>'+esc(b.name || "Seafood Catalog")+'</h1>'+
+      '<p class="tagline">'+ data.items.length +' items, priced by the pound &mdash; shrimp, crab, whole fish, fillets, shellfish and more. Search or filter, then build a quote.</p>'+
+      '<div class="hero-row">'+
+        (b.phone ? '<a class="phone-pill" href="tel:'+esc(b.phone.replace(/[^0-9+]/g,''))+'">&#9742;&nbsp; '+esc(b.phone)+'</a>' : '')+
+        '<button type="button" class="admin-pill" id="toggleEdit" data-on="'+ui.editMode+'">'+(ui.editMode ? '&#9998; Editing &mdash; exit' : '&#9998; Edit catalog')+'</button>'+
+      '</div>'+
+    '</div></header>';
+  }
+
+  function renderAdminBar(data){
+    if(!ui.editMode) return "";
+    return '<div class="admin-bar">'+
+      '<span class="tag">&#128274; Edit mode</span>'+
+      '<button type="button" class="btn small" id="addItemBtn">+ Add item</button>'+
+      '<button type="button" class="btn small primary" id="publishBtn">Save &amp; download updated HTML</button>'+
+      '<button type="button" class="btn small ghost" id="cancelEditBtn">Cancel</button>'+
+      '<span style="color:var(--ink-soft);font-size:12px;">Downloads a new HTML file with your changes baked in — replace the old file with it.</span>'+
+    '</div>';
+  }
+
+  function renderSettingsPanel(data){
+    var b = data.business;
+    return '<div class="wrap"><div class="settings-panel">'+
+      field("Business name","biz_name",b.name,"text")+
+      field("Order phone","biz_phone",b.phone,"text")+
+      field("Order email","biz_email",b.email,"text","name@example.com")+
+      '<div></div>'+
+      fieldTextarea("Footer note (shown to customers)","biz_note",b.note)+
+    '</div></div>';
+  }
+  function field(label,id,val,type,ph){
+    return '<div class="field"><label>'+esc(label)+'</label><input type="'+type+'" id="'+id+'" value="'+esc(val||"")+'" placeholder="'+esc(ph||"")+'"></div>';
+  }
+  function fieldTextarea(label,id,val){
+    return '<div class="field full"><label>'+esc(label)+'</label><textarea id="'+id+'">'+esc(val||"")+'</textarea></div>';
+  }
+
+  function renderControls(data){
+    var counts = {};
+    data.items.forEach(function(it){ counts[it.category]=(counts[it.category]||0)+1; });
+    var chips = '<button type="button" class="chip" data-cat="__all__" aria-pressed="'+(ui.cats.size===0)+'">All <span style="opacity:.6">('+data.items.length+')</span></button>';
+    CAT_ORDER.forEach(function(cat){
+      if(!counts[cat]) return;
+      chips += '<button type="button" class="chip" data-cat="'+esc(cat)+'" aria-pressed="'+ui.cats.has(cat)+'">'+
+        '<span class="swatch" style="background:'+catColor(cat)+'"></span>'+esc(cat)+' <span style="opacity:.6">('+counts[cat]+')</span></button>';
+    });
+    return '<div class="controls">'+
+      '<div class="search-row">'+
+        '<div class="search-box">'+
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>'+
+          '<input id="search" type="text" placeholder="Search item, pack size, category…" autocomplete="off" value="'+esc(ui.q)+'">'+
+        '</div>'+
+        '<select id="sort">'+
+          '<option value="cat"'+(ui.sort==="cat"?" selected":"")+'>Category</option>'+
+          '<option value="name"'+(ui.sort==="name"?" selected":"")+'>Name A–Z</option>'+
+          '<option value="price-asc"'+(ui.sort==="price-asc"?" selected":"")+'>Price: Low–High</option>'+
+          '<option value="price-desc"'+(ui.sort==="price-desc"?" selected":"")+'>Price: High–Low</option>'+
+        '</select>'+
+      '</div>'+
+      '<div class="chip-row" id="chips">'+chips+'</div>'+
+      '<div class="meta-row"><span><b id="count">0</b> items shown</span>'+
+      '<span id="clearWrap" style="display:none;"><a href="#" id="clearBtn" style="color:var(--coral);text-decoration:none;font-weight:600;">Clear filters ✕</a></span></div>'+
+    '</div>';
+  }
+
+  function filterSort(data){
+    var q = ui.q.trim().toLowerCase();
+    var list = data.items.filter(function(it){
+      if(ui.cats.size && !ui.cats.has(it.category)) return false;
+      if(q){
+        var hay = (it.name+" "+it.pack+" "+it.category).toLowerCase();
+        if(hay.indexOf(q)===-1) return false;
+      }
+      return true;
+    });
+    if(ui.sort==="name"){ list.sort(function(a,b){return a.name.localeCompare(b.name);}); }
+    else if(ui.sort==="price-asc"){ list.sort(function(a,b){return (a.price==null?1e9:a.price)-(b.price==null?1e9:b.price);}); }
+    else if(ui.sort==="price-desc"){ list.sort(function(a,b){return (b.price==null?-1:b.price)-(a.price==null?-1:a.price);}); }
+    return list;
+  }
+
+  function renderResults(data){
+    var list = filterSort(data);
+    if(!list.length){
+      return '<div class="empty"><div class="big">🦐</div>No items match — try a different search or clear filters.</div>';
+    }
+    if(ui.editMode){
+      return '<div class="group"><div class="card">'+list.map(editRowHtml).join('')+'</div></div>';
+    }
+    if(ui.sort!=="cat"){
+      return '<div class="group"><div class="card">'+list.map(viewRowHtml).join('')+'</div></div>';
+    }
+    var byCat = {};
+    list.forEach(function(it){ (byCat[it.category]=byCat[it.category]||[]).push(it); });
+    var order = CAT_ORDER.filter(function(c){return byCat[c];});
+    Object.keys(byCat).forEach(function(c){ if(order.indexOf(c)===-1) order.push(c); });
+    return order.map(function(cat){
+      var arr = byCat[cat];
+      return '<div class="group"><div class="group-title"><span class="swatch" style="background:'+catColor(cat)+'"></span>'+esc(cat)+' <span class="count">('+arr.length+')</span></div>'+
+        '<div class="card">'+arr.map(viewRowHtml).join('')+'</div></div>';
+    }).join('');
+  }
+
+  function viewRowHtml(it){
+    var subs = [];
+    if(it.pack) subs.push('<span>Pack '+esc(it.pack)+'</span>');
+    if(it.case) subs.push('<span>'+esc(it.case)+'</span>');
+    if(it.qty!=null) subs.push('<span>Qty '+(it.qty%1===0?it.qty.toFixed(0):it.qty)+'</span>');
+    var inCart = cart[it.id]||0;
+    var qtyControl = inCart>0
+      ? '<div class="stepper" data-id="'+it.id+'"><button type="button" class="dec">&minus;</button><span class="n">'+inCart+'</span><button type="button" class="inc">+</button></div>'
+      : '<button type="button" class="add-btn" data-id="'+it.id+'">+ Add</button>';
+    return '<div class="item">'+
+      '<div class="name">'+esc(it.name)+'</div>'+
+      '<div class="sub">'+subs.join('')+'</div>'+
+      '<div class="price"><span class="amt">'+fmtPrice(it.price)+'</span><span class="per">per '+esc(it.unit||'unit')+'</span>'+qtyControl+'</div>'+
+    '</div>';
+  }
+
+  function editRowHtml(it){
+    var cost = costs[it.id];
+    var marginHtml = "";
+    if(cost!=null && it.price!=null && cost>0){
+      var margin = it.price - cost;
+      var pct = (margin/it.price*100);
+      var cls = margin<0 ? "margin-note neg" : "margin-note";
+      marginHtml = '<div class="'+cls+'">margin <b>'+fmtPrice(margin)+'</b> ('+pct.toFixed(0)+'%) on cost '+fmtPrice(cost)+'</div>';
+    }
+    var catOptions = CAT_ORDER.map(function(c){
+      return '<option value="'+esc(c)+'"'+(c===it.category?" selected":"")+'>'+esc(c)+'</option>';
+    }).join('');
+    return '<div class="item editing" data-id="'+it.id+'">'+
+      '<div class="edit-grid">'+
+        '<div class="full"><label>Item name</label><input class="f-name" value="'+esc(it.name)+'"></div>'+
+        '<div><label>Pack</label><input class="f-pack" value="'+esc(it.pack)+'"></div>'+
+        '<div><label>Category</label><select class="f-cat">'+catOptions+'</select></div>'+
+        '<div><label>Price ($)</label><input class="f-price" type="number" step="0.01" value="'+(it.price==null?"":it.price)+'"></div>'+
+        '<div><label>Unit</label><input class="f-unit" value="'+esc(it.unit)+'"></div>'+
+        '<div><label>Packaging</label><input class="f-case" value="'+esc(it.case)+'"></div>'+
+        '<div><label>Qty</label><input class="f-qty" type="number" step="1" value="'+(it.qty==null?"":it.qty)+'"></div>'+
+        '<div><label>Your cost ($, private)</label><input class="f-cost" type="number" step="0.01" value="'+(cost==null?"":cost)+'"></div>'+
+      '</div>'+
+      marginHtml+
+      '<div class="item-edit-actions"><button type="button" class="btn small danger f-delete">Delete item</button></div>'+
+    '</div>';
+  }
+
+  function renderFooter(data){
+    var b = data.business;
+    return '<footer class="note">'+
+      (b.note ? esc(b.note)+' ' : '')+
+      (b.phone ? 'Call <a href="tel:'+esc(b.phone.replace(/[^0-9+]/g,''))+'" style="color:var(--coral);font-weight:700;text-decoration:none;">'+esc(b.phone)+'</a> to confirm current pricing and place an order.' : '')+
+      '<div class="updated-line">Catalog last updated '+esc(b.updated||"")+'</div>'+
+    '</footer>';
+  }
+
+  function renderQuoteBar(data){
+    return '<div class="quote-bar"><button type="button" id="openDrawer">🧺 View quote (' + cartCount() + ') <span class="total">'+fmtPrice(cartTotal(data))+'</span></button></div>';
+  }
+
+  function openDrawerDOM(data){
+    var wrap = document.createElement("div");
+    wrap.className = "drawer-overlay";
+    wrap.id = "drawerOverlay";
+    var ids = Object.keys(cart);
+    var rows = ids.map(function(id){
+      var it = findItem(data, id);
+      if(!it) return "";
+      var lt = it.price!=null ? it.price*cart[id] : null;
+      return '<div class="cart-row" data-id="'+id+'">'+
+        '<div class="info"><div class="n">'+esc(it.name)+'</div><div class="p">'+fmtPrice(it.price)+' / '+esc(it.unit)+'</div></div>'+
+        '<div class="stepper"><button type="button" class="dec">&minus;</button><span class="n">'+cart[id]+'</span><button type="button" class="inc">+</button></div>'+
+        '<div class="line-total">'+(lt==null?"call":fmtPrice(lt))+'</div>'+
+      '</div>';
+    }).join('');
+    wrap.innerHTML = '<div class="drawer">'+
+      '<button type="button" class="close" id="closeDrawer">&times;</button>'+
+      '<h2>Your quote</h2>'+
+      '<div id="cartRows">'+(rows||'<p style="color:var(--ink-soft);font-size:13.5px;">Your quote is empty.</p>')+'</div>'+
+      '<div class="cart-total-row"><span>Estimated total</span><span>'+fmtPrice(cartTotal(data))+'</span></div>'+
+      '<div class="cart-fields">'+
+        '<div class="field"><label>Your name</label><input id="custName" value="'+esc(customer.name)+'"></div>'+
+        '<div class="field"><label>Phone or callback number</label><input id="custPhone" value="'+esc(customer.phone)+'"></div>'+
+        '<div class="field"><label>Notes (delivery date, substitutions, etc.)</label><textarea id="custNotes">'+esc(customer.notes)+'</textarea></div>'+
+      '</div>'+
+      '<div class="preview-box" id="preview"></div>'+
+      '<div class="cart-actions">'+
+        '<a class="btn coral" id="emailQuote" href="#">Email this quote</a>'+
+        '<button type="button" class="btn" id="copyQuote">Copy to clipboard</button>'+
+        '<button type="button" class="btn ghost" id="clearCart">Clear quote</button>'+
+      '</div>'+
+    '</div>';
+    document.body.appendChild(wrap);
+    updatePreview(data);
+    wrap.addEventListener("click", function(e){ if(e.target===wrap) closeDrawer(); });
+    document.getElementById("closeDrawer").onclick = closeDrawer;
+    wrap.querySelectorAll(".cart-row").forEach(function(row){
+      var id = row.getAttribute("data-id");
+      row.querySelector(".inc").onclick = function(){ setCartQty(id,(cart[id]||0)+1); refreshDrawer(data); };
+      row.querySelector(".dec").onclick = function(){ setCartQty(id,(cart[id]||0)-1); refreshDrawer(data); };
+    });
+    ["custName","custPhone","custNotes"].forEach(function(id){
+      document.getElementById(id).addEventListener("input", function(){
+        customer.name = document.getElementById("custName").value;
+        customer.phone = document.getElementById("custPhone").value;
+        customer.notes = document.getElementById("custNotes").value;
+        saveJSON(CUSTOMER_KEY, customer);
+        updatePreview(data);
+      });
+    });
+    document.getElementById("copyQuote").onclick = function(){
+      var text = buildOrderText(data);
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){ toast("Quote copied — paste it into a text or email."); });
+      } else { window.prompt("Copy this quote:", text); }
+    };
+    document.getElementById("clearCart").onclick = function(){
+      cart = {}; saveJSON(CART_KEY, cart); closeDrawer(); render();
+    };
+    updateEmailLink(data);
+  }
+
+  function refreshDrawer(data){ closeDrawer(); ui.drawerOpen = true; render(); }
+
+  function updatePreview(data){
+    var el = document.getElementById("preview");
+    if(el) el.textContent = buildOrderText(data);
+    updateEmailLink(data);
+    var barTotal = document.querySelector(".cart-total-row span:last-child");
+    if(barTotal) barTotal.textContent = fmtPrice(cartTotal(data));
+  }
+  function updateEmailLink(data){
+    var a = document.getElementById("emailQuote");
+    if(!a) return;
+    var b = data.business||{};
+    var subject = "Order request — " + (b.name || "Seafood order");
+    var body = buildOrderText(data);
+    a.href = "mailto:" + (b.email||"") + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+  }
+  function buildOrderText(data){
+    var b = data.business||{};
+    var lines = [];
+    lines.push("Order request — " + (b.name||""));
+    if(customer.name) lines.push("From: " + customer.name);
+    if(customer.phone) lines.push("Phone: " + customer.phone);
+    lines.push("");
+    var ids = Object.keys(cart);
+    if(!ids.length){ lines.push("(no items selected yet)"); }
+    ids.forEach(function(id){
+      var it = findItem(data, id);
+      if(!it) return;
+      var lt = it.price!=null ? (it.price*cart[id]).toFixed(2) : "call";
+      lines.push(cart[id] + " x " + it.name + " (" + it.pack + ") @ " + fmtPrice(it.price) + "/" + it.unit + " = $" + lt);
+    });
+    lines.push("");
+    lines.push("Estimated total: " + fmtPrice(cartTotal(data)));
+    if(customer.notes) { lines.push(""); lines.push("Notes: " + customer.notes); }
+    return lines.join("\n");
+  }
+  function closeDrawer(){
+    ui.drawerOpen = false;
+    var el = document.getElementById("drawerOverlay");
+    if(el) el.remove();
+  }
+
+  function wireEvents(data){
+    var searchEl = document.getElementById("search");
+    if(searchEl){
+      searchEl.addEventListener("input", function(e){
+        ui.q = e.target.value;
+        document.getElementById("results").innerHTML = renderResults(ui.editMode?draft:liveData);
+        wireResultEvents(ui.editMode?draft:liveData);
+        updateMeta(ui.editMode?draft:liveData);
+      });
+    }
+    var sortEl = document.getElementById("sort");
+    if(sortEl){
+      sortEl.addEventListener("change", function(e){
+        ui.sort = e.target.value;
+        document.getElementById("results").innerHTML = renderResults(ui.editMode?draft:liveData);
+        wireResultEvents(ui.editMode?draft:liveData);
+      });
+    }
+    var chips = document.getElementById("chips");
+    if(chips){
+      chips.addEventListener("click", function(e){
+        var btn = e.target.closest(".chip");
+        if(!btn) return;
+        var cat = btn.getAttribute("data-cat");
+        if(cat==="__all__") ui.cats.clear();
+        else { if(ui.cats.has(cat)) ui.cats.delete(cat); else ui.cats.add(cat); }
+        render();
+      });
+    }
+    var clearBtn = document.getElementById("clearBtn");
+    if(clearBtn){
+      clearBtn.addEventListener("click", function(e){
+        e.preventDefault(); ui.q=""; ui.cats.clear(); ui.sort="cat"; render();
+      });
+    }
+    updateMeta(data);
+    wireResultEvents(data);
+
+    var openDrawerBtn = document.getElementById("openDrawer");
+    if(openDrawerBtn) openDrawerBtn.onclick = function(){ ui.drawerOpen = true; openDrawerDOM(data); };
+
+    var toggleEdit = document.getElementById("toggleEdit");
+    if(toggleEdit){
+      toggleEdit.onclick = function(){
+        if(ui.editMode){ ui.editMode = false; draft = null; render(); }
+        else { draft = JSON.parse(JSON.stringify(liveData)); ui.editMode = true; render(); }
+      };
+    }
+    var cancelBtn = document.getElementById("cancelEditBtn");
+    if(cancelBtn) cancelBtn.onclick = function(){ ui.editMode=false; draft=null; render(); };
+
+    var addItemBtn = document.getElementById("addItemBtn");
+    if(addItemBtn){
+      addItemBtn.onclick = function(){
+        draft.items.unshift({id:uid(), name:"New item", pack:"", price:null, unit:"LB", case:"CS", qty:null, category:CAT_ORDER[0]});
+        ui.q=""; ui.cats.clear();
+        render();
+      };
+    }
+    var publishBtn = document.getElementById("publishBtn");
+    if(publishBtn) publishBtn.onclick = function(){ doExport(); };
+
+    ["biz_name","biz_phone","biz_email","biz_note"].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener("input", function(){
+        if(!draft) return;
+        draft.business.name = document.getElementById("biz_name").value;
+        draft.business.phone = document.getElementById("biz_phone").value;
+        draft.business.email = document.getElementById("biz_email").value;
+        draft.business.note = document.getElementById("biz_note").value;
+      });
+    });
+  }
+
+  function updateMeta(data){
+    var countEl = document.getElementById("count");
+    if(countEl) countEl.textContent = filterSort(data).length;
+    var clearWrap = document.getElementById("clearWrap");
+    if(clearWrap) clearWrap.style.display = (ui.q || ui.cats.size) ? "" : "none";
+  }
+
+  function wireResultEvents(data){
+    var results = document.getElementById("results");
+    if(!results) return;
+    if(ui.editMode){
+      results.querySelectorAll(".item.editing").forEach(function(row){
+        var id = row.getAttribute("data-id");
+        var it = findItem(draft, id);
+        if(!it) return;
+        bindEdit(row,".f-name", function(v){ it.name=v; });
+        bindEdit(row,".f-pack", function(v){ it.pack=v; });
+        bindEdit(row,".f-unit", function(v){ it.unit=v; });
+        bindEdit(row,".f-case", function(v){ it.case=v; });
+        bindEdit(row,".f-price", function(v){ it.price=num(v,null); updateMarginNote(row,it); });
+        bindEdit(row,".f-qty", function(v){ it.qty=num(v,null); });
+        var costInput = row.querySelector(".f-cost");
+        if(costInput){
+          costInput.addEventListener("input", function(){
+            var v = num(costInput.value,null);
+            if(v==null) delete costs[id]; else costs[id]=v;
+            saveJSON(COST_KEY, costs);
+            updateMarginNote(row,it);
+          });
+        }
+        var catSel = row.querySelector(".f-cat");
+        if(catSel) catSel.addEventListener("change", function(){ it.category = catSel.value; });
+        var delBtn = row.querySelector(".f-delete");
+        if(delBtn) delBtn.onclick = function(){
+          draft.items = draft.items.filter(function(x){return x.id!==id;});
+          render();
+        };
+      });
+      return;
+    }
+    results.querySelectorAll(".add-btn").forEach(function(btn){
+      btn.onclick = function(){ setCartQty(btn.getAttribute("data-id"), 1); render(); };
+    });
+    results.querySelectorAll(".stepper").forEach(function(st){
+      var id = st.getAttribute("data-id");
+      st.querySelector(".inc").onclick = function(){ setCartQty(id,(cart[id]||0)+1); render(); };
+      st.querySelector(".dec").onclick = function(){ setCartQty(id,(cart[id]||0)-1); render(); };
+    });
+  }
+
+  function bindEdit(row, sel, fn){
+    var el = row.querySelector(sel);
+    if(!el) return;
+    el.addEventListener("input", function(){ fn(el.value); });
+  }
+
+  function updateMarginNote(row, it){
+    var cost = costs[it.id];
+    var existing = row.querySelector(".margin-note");
+    var html = "";
+    if(cost!=null && it.price!=null && cost>0){
+      var margin = it.price-cost, pct = margin/it.price*100;
+      var cls = margin<0 ? "margin-note neg" : "margin-note";
+      html = '<div class="'+cls+'">margin <b>'+fmtPrice(margin)+'</b> ('+pct.toFixed(0)+'%) on cost '+fmtPrice(cost)+'</div>';
+    }
+    if(existing){ if(html) existing.outerHTML = html; else existing.remove(); }
+    else if(html){ row.querySelector(".item-edit-actions").insertAdjacentHTML("beforebegin", html); }
+  }
+
+  // ---- export a fresh standalone HTML file with the edited catalog baked in ----
+  function doExport(){
+    if(!draft) return;
+    for(var i=0;i<draft.items.length;i++){
+      if(!draft.items[i].name || !draft.items[i].name.trim()){
+        alert("Every item needs a name before you can save.");
+        return;
+      }
+    }
+    draft.business.updated = todayISO();
+
+    // close any open overlays so the exported page starts clean
+    closeDrawer();
+    var wasEditing = ui.editMode;
+    ui.editMode = false;
+    var savedDraft = draft;
+    draft = null;
+    liveData = savedDraft;
+    render();
+
+    var dataScript = document.getElementById("data");
+    dataScript.textContent = JSON.stringify(liveData);
+
+    var fullHtml = "<!doctype html>\n" + document.documentElement.outerHTML;
+    var blob = new Blob([fullHtml], {type: "text/html"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "seafood-price-list.html";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+
+    toast("Downloaded seafood-price-list.html — send that file out to replace the old one.");
+  }
+
+})();
+
+</script>
+</body>
+</html>
