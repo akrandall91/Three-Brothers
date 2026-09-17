@@ -9,19 +9,9 @@
     note: "We offer a wide variety of fresh and live seafood, including Dungeness crab, blue crab, lobster, fresh yellowfin tuna, clams (any size), and oysters (all kinds). Emergency weekend deliveries available. Prices are updated weekly and vary by product."
   };
 
-  // ---- Item prices/pack/etc. live in a Google Sheet, published as CSV. ----
-  // To point this at a different sheet: File > Share > Publish to web > select
-  // the sheet > CSV > Publish, then paste the URL it gives you here. It looks
-  // like: https://docs.google.com/spreadsheets/d/e/<LONG_ID>/pub?output=csv
-  // (Plain "anyone with the link" sharing + the /export URL does NOT work for
-  // anonymous visitors — only "Publish to the web" does.)
-  var SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTAlMorq-Qm00CunOdRydhqFnABThudytc-OkFPD4SmXsEi-_BYiCbNIWpPj0ENNCK0KD5BgrMkxyKo/pub?output=csv";
-
-  // ---- Submitted orders get appended as rows to a separate "Orders" Google
-  // Sheet via a Google Apps Script Web App (see apps-script/Code.gs and the
-  // README's "Order tracking" section for how to set this up). Leave blank
-  // to disable the "Submit order" button (email/copy quote still work).
-  var ORDERS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwE24vSsmdBhP8S_qeMPqx2Ocp88HVqdnEd8EtI27mWlXhCS65j5imX9vIU0-TbwkMP1A/exec";
+  // ---- Endpoints live in assets/config.js (shared with admin.html). ----
+  var SHEET_CSV_URL = window.SITE_CONFIG.SHEET_CSV_URL;
+  var ORDERS_WEBHOOK_URL = window.SITE_CONFIG.API_URL;
 
   var CAT_COLORS = {
     "Shrimp": "#e2632f",
